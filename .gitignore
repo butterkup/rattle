@@ -1,0 +1,6 @@
+ignore.*
+*.ign
+__pycache__/
+.vscode/
+*.o
+*.so
