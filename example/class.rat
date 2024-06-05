@@ -1,0 +1,39 @@
+class Person {
+  let name = "", age = 0; # Class Variables
+  fn __init__(this, name, age) {
+    # Instance Variables
+    this.name = name;
+    this.age = age;
+  }
+  fn __str__(this) {
+    return "Person(name='%s', age=%s)" % (
+      this.name, this.age
+    );
+  }
+  fn __bool__(this) {
+    return this.name and this.age;
+  }
+  fn __add__(this, other) {
+    return Person(
+      this.name + other.name,
+      this.age + other.age
+    );
+  }
+  fn greet(this) {
+    return "Hello %s?" % this.name;
+  }
+}
+
+let
+  p1 = Person("Person One", 10),
+  p2 = Person("Person Two", 15),
+  p3 = p1 + p2;
+
+print(p3) # Person(name='Person OnePerson Two', age=25);
+print(p3.greet) # bound method
+print(Person.greet) # function greet
+print(Person.greet(p1) == p1.greet()) # true
+
+class A { }
+class B { }
+class C(A, B) { }

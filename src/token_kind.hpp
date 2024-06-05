@@ -22,6 +22,10 @@ TOKEN_KIND(Lastly)
 TOKEN_KIND(Except)
 TOKEN_KIND(Return)
 TOKEN_KIND(With)
+TOKEN_KIND(Assert)
+TOKEN_KIND(From)
+TOKEN_KIND(True)
+TOKEN_KIND(False)
 
 TOKEN_KIND(Comma) // ,
 TOKEN_KIND(HashTag) // #
@@ -65,5 +69,5 @@ TOKEN_KIND(Rshift) // >>
 TOKEN_KIND(RshiftEqual) // >>=
 
 #else
-# warning "Did you forget to define `TOKEN_KIND(tok_type)` macro"
+# warning "Did you forget to define `TOKEN_KIND(tok_kind)` function macro"
 #endif

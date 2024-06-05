@@ -8,11 +8,12 @@
 
 namespace rat::core {
   struct Source {
-    const std::string source;
-    std::vector<const std::string_view> lines;
+    std::string source;
+    std::vector<std::string_view> lines;
   };
 
   struct SyntaxError {
+    std::string_view message;
     std::size_t
       line,
       column,
@@ -22,7 +23,7 @@ namespace rat::core {
 
   struct Config {
     Source source;
-    std::queue<const SyntaxError> errors;
+    std::queue<SyntaxError> errors;
   };
 }
 
