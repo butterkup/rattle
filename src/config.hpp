@@ -6,24 +6,34 @@
 #include <vector>
 #include <queue>
 
-namespace rat::core {
+namespace rat {
   struct Source {
-    std::string source;
+    std::string content;
     std::vector<std::string_view> lines;
+    Source(): content(), lines() { }
+    Source(std::string const& content)
+      : content(content), lines() { }
   };
 
+  enum class Phase {
+    lexing, parsing, analysis
+  };
+
+  struct Location {
+    std::size_t line, column, offset, length;
+  };
+
+
   struct SyntaxError {
+    Phase phase;
     std::string_view message;
-    std::size_t
-      line,
-      column,
-      offset,
-      span;
+    Location location;
   };
 
   struct Config {
     Source source;
     std::queue<SyntaxError> errors;
+    Config(): source(), errors() { }
   };
 }
 

@@ -1,7 +1,7 @@
 #ifdef TOKEN_KIND
 
-TOKEN_KIND(ERROR) // symbolyze an error like invalid character
-TOKEN_KIND(EOF) // end of tokens marker
+TOKEN_KIND(Error) // symbolyze an error like invalid character
+TOKEN_KIND(Eot) // end of tokens marker
 
 TOKEN_KIND(Raise)
 TOKEN_KIND(Class)
@@ -37,6 +37,7 @@ TOKEN_KIND(CloseParen) // )
 TOKEN_KIND(OpenBracket) // [
 TOKEN_KIND(CloseBracket) // ]
 
+TOKEN_KIND(Identifier) // [a-zA-Z_][a-zA-Z0-9_]*
 TOKEN_KIND(String) // 'single line string' "single line string"
 TOKEN_KIND(LongString) // """Multiline String"""
 TOKEN_KIND(Binary) // 0b101010101
