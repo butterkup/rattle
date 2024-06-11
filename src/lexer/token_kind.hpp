@@ -68,6 +68,14 @@ TOKEN_KIND(Lshift) // <<
 TOKEN_KIND(LshiftEqual) // <<=
 TOKEN_KIND(Rshift) // >>
 TOKEN_KIND(RshiftEqual) // >>=
+TOKEN_KIND(BitOr) // |
+TOKEN_KIND(BitOrEqual) // |=
+TOKEN_KIND(BitAnd) // &
+TOKEN_KIND(BitAndEqual) // &=
+TOKEN_KIND(Invert) // ~
+TOKEN_KIND(InvertEqual) // ~=
+TOKEN_KIND(At) // @
+TOKEN_KIND(AtEqual) // @=
 
 #else
 # warning "Did you forget to define `TOKEN_KIND(tok_kind)` function macro"

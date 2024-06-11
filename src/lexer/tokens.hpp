@@ -1,6 +1,7 @@
 #ifndef _rat_tokens
 #define _rat_tokens
 
+#include <ostream>
 #include "utility.hpp"
 #include <string_view>
 #include <unordered_map>

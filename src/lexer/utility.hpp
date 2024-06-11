@@ -10,6 +10,20 @@ namespace rat::lexer {
     bool isidchar(char c) {
       return std::isalnum(c) or c == '_';
     }
+    bool isoperator(char c) {
+      switch (c) {
+        case '+':
+        case '%':
+        case '>':
+        case '<':
+        case '=':
+        case '!':
+        case '*':
+        case '/':
+        case '-': return true;
+        default: return false;
+      }
+    }
     bool isspace(char c) {
       switch ( c ) {
       case ' ':

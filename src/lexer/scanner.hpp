@@ -47,6 +47,10 @@ namespace rat::lexer {
       case '-': return S.make_token(S.match_next('=') ? MinusEqual : Minus);
       case '/': return S.make_token(S.match_next('=') ? SlashEqual : Slash);
       case '=': return S.make_token(S.match_next('=') ? EqualEqual : Equal);
+      case '|': return S.make_token(S.match_next('=') ? BitOrEqual : BitOr);
+      case '&': return S.make_token(S.match_next('=') ? BitAndEqual : BitAnd);
+      case '~': return S.make_token(S.match_next('=') ? InvertEqual : Invert);
+      case '@': return S.make_token(S.match_next('=') ? AtEqual : At);
       case '!': return S.make_token(
         S.match_next('=') ? NotEqual : (
           S.report_error(
@@ -64,8 +68,8 @@ namespace rat::lexer {
       case '{': return S.make_token((S.advance(), OpenBrace));
       case '}': return S.make_token((S.advance(), CloseBrace));
       case ';': return S.make_token((S.advance(), Semicolon));
-      case '\'':
-      case '"': return S.make_token(consume_string(S));
+      // case '\'':
+      // case '"': return S.make_token(consume_string(S));
       default:
         if ( utils::isdecimal(S.peek()) )
           return S.make_token(consume_number(S));
