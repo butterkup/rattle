@@ -8,22 +8,22 @@ namespace rat::lexer {
   // facade of how numbers are lexed
   namespace number_lexer {
     namespace consume {
-      inline std::size_t _if(State& S, bool (* const predicate)(char)) {
-        std::string::const_iterator start = S.current;
+      inline auto _if(State& S, bool (* const predicate)(char)) {
+        std::string::iterator start = S.current;
         while ( not S.empty() and predicate(S.peek()) ) S.advance();
         return S.current - start;
       }
 
-      inline std::size_t b2(State& S) {
+      inline auto b2(State& S) {
         return _if(S, utils::isbinary);
       }
-      inline std::size_t b8(State& S) {
+      inline auto b8(State& S) {
         return _if(S, utils::isoctal);
       }
-      inline std::size_t b10(State& S) {
+      inline auto b10(State& S) {
         return _if(S, utils::isdecimal);
       }
-      inline std::size_t b16(State& S) {
+      inline auto b16(State& S) {
         return _if(S, utils::ishexadecimal);
       }
     }

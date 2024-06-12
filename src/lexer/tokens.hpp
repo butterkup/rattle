@@ -49,7 +49,7 @@ namespace rat::lexer {
     using Kind = _impl::token_kind;
     Kind kind;
     std::string_view content;
-    Location location;
+    Location start, end;
   };
 
   const auto Keywords = [] {
@@ -64,15 +64,15 @@ namespace rat::lexer {
   }();
 
   std::ostream& operator<<(std::ostream& out, Location const& L) {
-    return out << "Location(line=(" << L.start_line << ", " << L.last_line
-      << "), column=(" << L.start_column << ", " << L.end_column
-      << "), span=(" << L.view_start << ", " << L.view_end << "))";
+    return out << "Location(line=" << L.line
+      << ", column=" << L.column
+      << ", offset=" << L.offset << ')';
   }
 
   std::ostream& operator<<(std::ostream& out, Token const& T) {
     return out << "Token(kind=" << _impl::to_string(T.kind)
-      << ", content='" << T.content << "', location="
-      << T.location << ')';
+      << ", content='" << T.content << "', location=("
+      << T.start << ", " << T.end << "))";
   }
 }
 

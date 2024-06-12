@@ -1,3 +1,5 @@
+"Hello, my name is \"Simon\""
+
 1234
 12.34
 1.234e5
@@ -12,13 +14,14 @@
 12345678910
 0o1234567654321
 02343827713
-"Single line string"
-'Another One'
-"""
-This is a
-Multiline string
-"""
-'''
-Another Multiline
-String Here
-'''
+
+# "Single line string"
+# 'Another One'
+# """
+# This is a
+# Multiline string
+# """
+# '''
+# Another Multiline
+# String Here
+# '''

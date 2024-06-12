@@ -11,17 +11,17 @@ namespace rat::lexer {
       return std::isalnum(c) or c == '_';
     }
     bool isoperator(char c) {
-      switch (c) {
-        case '+':
-        case '%':
-        case '>':
-        case '<':
-        case '=':
-        case '!':
-        case '*':
-        case '/':
-        case '-': return true;
-        default: return false;
+      switch ( c ) {
+      case '+':
+      case '%':
+      case '>':
+      case '<':
+      case '=':
+      case '!':
+      case '*':
+      case '/':
+      case '-': return true;
+      default: return false;
       }
     }
     bool isspace(char c) {
@@ -83,19 +83,24 @@ namespace rat::lexer {
     }
   }
 
+  struct StringView {
+    using Type = std::string::iterator;
+    Type begin, end;
+    StringView()
+      : begin(), end() { }
+    StringView(Type begin, Type end)
+      : begin(begin), end(end) { }
+  };
+
   struct Location {
-    std::size_t
-      start_line,
-      last_line,
-      start_column,
-      end_column,
-      view_start,
-      view_end;
+    std::size_t line;
+    std::string::difference_type
+      column, offset;
   };
 
   struct Source {
     std::string content;
-    std::vector<std::string_view> lines;
+    std::vector<StringView> lines;
 
     Source(): content{ }, lines{ } { }
     Source(std::string const& content)
@@ -108,7 +113,7 @@ namespace rat::lexer {
 
   struct SyntaxError {
     std::string_view msg, fix;
-    Location where;
+    Location start, end;
   };
 
   struct Config {

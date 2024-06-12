@@ -68,8 +68,8 @@ namespace rat::lexer {
       case '{': return S.make_token((S.advance(), OpenBrace));
       case '}': return S.make_token((S.advance(), CloseBrace));
       case ';': return S.make_token((S.advance(), Semicolon));
-      // case '\'':
-      // case '"': return S.make_token(consume_string(S));
+      case '\'':
+      case '"': return S.make_token(consume_string(S));
       default:
         if ( utils::isdecimal(S.peek()) )
           return S.make_token(consume_number(S));
