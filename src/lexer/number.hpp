@@ -28,12 +28,60 @@ namespace rat::lexer {
       }
     }
 
+    namespace ns {
+      std::pair<Token::Kind, std::size_t>
+        number_separator(State& S, bool(* const checker)(char), Token::Kind kind, const char* msg) {
+        std::size_t total{ 0 };
+        for ( ; not S.empty();) {
+          total += consume::_if(S, checker);
+          if ( S.safe(2) and S.peek() == '_' ) {
+            if ( checker(S.peek(1)) ) S.erase();
+            else if ( S.peek(1) == '_' ) kind = (S.advance(), S.report_error(msg,
+              "Make sure all characters in the literals belong to the base of the literal "
+              "and there is atmost one separator between each."
+            ), Token::Kind::Error);
+            else break;
+          } else break;
+        }
+        return { kind, total };
+      }
+
+      auto b2(State& S) {
+        return number_separator(
+          S, utils::isbinary,
+          Token::Kind::Binary,
+          "Invalid binary literal."
+        );
+      }
+      auto b8(State& S) {
+        return number_separator(
+          S, utils::isoctal,
+          Token::Kind::Octal,
+          "Invalid octal literal."
+        );
+      }
+      auto b10(State& S) {
+        return number_separator(
+          S, utils::isdecimal,
+          Token::Kind::Decimal,
+          "Invalid decimal literal."
+        );
+      }
+      auto b16(State& S) {
+        return number_separator(
+          S, utils::ishexadecimal,
+          Token::Kind::Hexadecimal,
+          "Invalid hexadecimal literal."
+        );
+      }
+    }
+
     Token::Kind consume_int_float(State& S) {
       auto kind = Token::Kind::Decimal;
-      consume::b10(S);
+      ns::b10(S);
 
       if ( not S.empty() and S.match('.') )
-        if ( not consume::b10(S) ) kind = (
+        if ( not ns::b10(S).second ) kind = (
           S.report_error(
             "Expected at least one digit after decimal point.",
             "Put at least one digit after the decimal point."
@@ -45,7 +93,7 @@ namespace rat::lexer {
           not S.empty() and (S.match('+') or S.match('-')),
           Token::Kind::Floating
           );
-        if ( not consume::b10(S) ) kind = (
+        if ( not ns::b10(S).second ) kind = (
           S.report_error(
             "Missing exponent value.",
             "Put at least one digit in the exponent section."
@@ -59,17 +107,17 @@ namespace rat::lexer {
       if ( S.match('0') and not S.empty() )
         switch ( S.peek() ) {
         case 'x':
-          return (S.advance(), consume::b16(S)) ? Token::Kind::Hexadecimal : (
+          return (S.advance(), ns::b16(S).second) ? Token::Kind::Hexadecimal : (
             S.report_error("At least one hexadecimal value is expected after '0x'"),
             Token::Kind::Error
             );
         case 'o':
-          return (S.advance(), consume::b8(S)) ? Token::Kind::Octal : (
+          return (S.advance(), ns::b8(S)).second ? Token::Kind::Octal : (
             S.report_error("At least one octal value is expected after '0o'"),
             Token::Kind::Error
             );
         case 'b':
-          return (S.advance(), consume::b2(S)) ? Token::Kind::Binary : (
+          return (S.advance(), ns::b2(S)).second ? Token::Kind::Binary : (
             S.report_error("At least one binary value is expected after '0b'"),
             Token::Kind::Error
             );

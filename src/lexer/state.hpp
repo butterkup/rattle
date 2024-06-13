@@ -14,7 +14,7 @@ namespace rat::lexer {
     std::string::iterator
       current, start_lexeme,
       start_line, _start, _end;
-    std::size_t _start_line, _last_line;
+    std::size_t _start_line, _current_line;
 
     State() = delete;
     explicit State(Config& cfg)
@@ -25,7 +25,7 @@ namespace rat::lexer {
       _start{ current },
       _end{ cfg.source.content.end() },
       _start_line{ 1UL },
-      _last_line{ _start_line } { }
+      _current_line{ _start_line } { }
 
     inline bool empty() const {
       return this->current == this->_end;
@@ -46,14 +46,14 @@ namespace rat::lexer {
           this->start_line, this->current
         );
         this->start_line = this->current;
-        this->_last_line++;
+        this->_current_line++;
       }
       return advanced;
     }
 
     void consume() {
       this->start_lexeme = this->current;
-      this->_start_line = this->_last_line;
+      this->_start_line = this->_current_line;
     }
 
     inline char peek(std::ptrdiff_t n = 0) const {
@@ -96,9 +96,11 @@ namespace rat::lexer {
     }
 
     Location start_location() const {
+      auto start_line = this->_start_line == this->_current_line ?
+        this->start_line : this->cfg.source.lines.at(this->_start_line - 1).begin;
       return {
         this->_start_line,
-        this->start_lexeme - this->start_line,
+        this->start_lexeme - start_line,
         this->start_lexeme - this->_start
       };
     }
@@ -107,7 +109,7 @@ namespace rat::lexer {
       auto start_line = this->cfg.source.lines.size() ?
         this->cfg.source.lines.back().end : this->_start;
       return {
-        this->_last_line,
+        this->_current_line,
         this->current - start_line,
         this->current - this->_start
       };

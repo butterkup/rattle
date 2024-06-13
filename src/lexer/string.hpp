@@ -11,87 +11,79 @@ namespace rat::lexer {
       while ( not S.empty() and predicate(S.peek()) ) S.advance();
     }
 
-    char b16tob10(char ch) {
+    char b16t10(char ch) {
+      // make sure ch is a valid hexadecimal character: [a-fA-F0-9]
       return ('0' <= ch and ch <= '9') ?
         ch - '0' : 10 + (ch - 'a');
     }
 
     Token::Kind escape_seqs(State& S, Token::Kind kind = Token::Kind::Eot) {
       using Token::Kind::Error;
-      if ( S.peek() == '\\' ) {
-        if ( not S.safe(2) )
-          return (S.report_error(
-            "Missing escaped character.",
-            "Remove backslash as it lacks the escapee."
-          ), Error);
-        else switch ( S.peek(1) ) {
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-          S.erase();
-          S.replace(S.peek() - '0');
-          S.advance();
-          break;
-        case 'n':
-          S.erase();
-          S.replace('\n');
-          S.advance();
-          break;
-        case 'f':
-          S.erase();
-          S.replace('\f');
-          S.advance();
-          break;
-        case 'v':
-          S.erase();
-          S.replace('\v');
-          S.advance();
-          break;
-        case '\'':
-        case '"':
-        case '\\':
-          S.erase();
-          S.advance();
-          break;
-        case 'x': {
-          if ( S.safe(4) ) {
-            auto const ishx = utils::ishexadecimal;
-            if ( ishx(S.peek(2)) and ishx(S.peek(3)) ) {
-              char ch = (b16tob10(S.peek(2)) << 4) | b16tob10(S.peek(3));
-              S.erase(); S.erase(); S.erase();
-              S.replace(ch); S.advance(); break;
-            } else  return (
-              S.advance(), S.advance(),
-              S.report_error(
-                "Invalid escape sequence, '\\xXX'",
-                "Make sure the two characters after '\\x' "
-                "literal are hexadecimal values."
-              ), Error
-              );
-          } else return (
-            S.advance(),
-            S.advance(),
+      switch ( S.peek(1) ) {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+        S.erase();
+        S.replace(S.peek() - '0');
+        S.advance();
+        break;
+      case 'n':
+        S.erase();
+        S.replace('\n');
+        S.advance();
+        break;
+      case 'f':
+        S.erase();
+        S.replace('\f');
+        S.advance();
+        break;
+      case 'v':
+        S.erase();
+        S.replace('\v');
+        S.advance();
+        break;
+      case '\'':
+      case '"':
+      case '\\':
+        S.erase();
+        S.advance();
+        break;
+      case 'x': {
+        if ( S.safe(4) ) {
+          auto const ishx = utils::ishexadecimal;
+          if ( ishx(S.peek(2)) and ishx(S.peek(3)) ) {
+            char ch = (b16t10(S.peek(2)) << 4) | b16t10(S.peek(3));
+            S.erase(); S.erase(); S.erase();
+            S.replace(ch); S.advance(); break;
+          } else  return (
+            S.advance(), S.advance(),
             S.report_error(
-              "Invalid escape sequence for '\\x', expected '\\xXX'."
+              "Invalid escape sequence, '\\xXX'",
+              "Make sure the two characters after '\\x' "
+              "literal are hexadecimal values."
             ), Error
             );
-        }
-        default: return (
+        } else return (
           S.advance(),
           S.advance(),
           S.report_error(
-            "Unexpected escaped character."
+            "Invalid escape sequence for '\\x', expected '\\xXX'."
           ), Error
           );
-        }
-      } else return (S.report_error(
-        "Unrecognized escaper character."
-      ), Error);
+      }
+      default: return (
+        S.advance(),
+        S.advance(),
+        S.report_error(
+          "Unexpected escaped character."
+        ), Error
+        );
+      }
       return kind;
     }
 
@@ -110,7 +102,12 @@ namespace rat::lexer {
         if ( S.match(quote) and S.safe(2) and S.match(quote) and S.match(quote) )
           return kind;
         if ( S.peek() == '\\' )
-          kind = escape_seqs(S, kind);
+          if ( not S.safe(2) )
+            return (S.report_error(
+              "Missing escaped character.",
+              "Remove backslash as it lacks the escapee."
+            ), Token::Kind::Error);
+          else kind = escape_seqs(S, kind);
       }
     }
 
