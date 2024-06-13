@@ -15,13 +15,16 @@
 0o1234567654321
 02343827713
 
-# "Single line string"
-# 'Another One'
-# """
-# This is a
-# Multiline string
-# """
-# '''
-# Another Multiline
-# String Here
-# '''
+"Single line\x0a string"
+'Another One'
+"""
+This is a
+Multiline string
+"with a string"
+'inside it'
+"""
+'''
+Another Multiline
+String Here
+\'''what a joke\'''
+'''

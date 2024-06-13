@@ -12,9 +12,8 @@ namespace rat::lexer {
   struct State {
     Config& cfg;
     std::string::iterator
-      current, start_lexeme, start_line;
-    std::string::iterator const
-      _start, _end;
+      current, start_lexeme,
+      start_line, _start, _end;
     std::size_t _start_line, _last_line;
 
     State() = delete;
@@ -57,7 +56,7 @@ namespace rat::lexer {
       this->_start_line = this->_last_line;
     }
 
-    inline char peek(std::size_t n = 0) const {
+    inline char peek(std::ptrdiff_t n = 0) const {
       return *(this->current + n);
     }
 
@@ -99,26 +98,25 @@ namespace rat::lexer {
     Location start_location() const {
       return {
         this->_start_line,
-        this->current - this->start_line,
-        this->start_line - this->_start
+        this->start_lexeme - this->start_line,
+        this->start_lexeme - this->_start
       };
     }
 
     Location current_location() const {
       auto start_line = this->cfg.source.lines.size() ?
-        this->cfg.source.lines.back().begin : this->_start;
+        this->cfg.source.lines.back().end : this->_start;
       return {
         this->_last_line,
         this->current - start_line,
-        start_line - this->_start
+        this->current - this->_start
       };
     }
 
     char erase() {
       char erased = this->peek();
-      auto current = this->current++;
-      this->cfg.source.content.erase(current);
-      return erased;
+      this->cfg.source.content.erase(this->current);
+      return (this->_end--, erased);
     }
 
     char replace(char new_char) {
