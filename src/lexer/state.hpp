@@ -1,130 +1,124 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #include <string_view>
-#include <queue>
 #include "utility.hpp"
 #include "tokens.hpp"
-
 
 namespace rat::lexer {
   struct State {
     Config& cfg;
+
     std::string::iterator
       current, start_lexeme,
-      start_line, _start, _end;
-    std::size_t _start_line, _current_line;
+      start_line, start_src, end_src,
+      start_line_lexeme;
+    std::size_t lexeme_line;
 
     State() = delete;
-    explicit State(Config& cfg)
-      : cfg{ cfg },
-      current{ cfg.source.content.begin() },
-      start_lexeme{ current },
-      start_line{ current },
-      _start{ current },
-      _end{ cfg.source.content.end() },
-      _start_line{ 1UL },
-      _current_line{ _start_line } { }
+    State(Config& cfg)
+      : cfg(cfg),
+      current(cfg.source.content.begin()),
+      start_lexeme(current),
+      start_line(current),
+      start_src(current),
+      end_src(cfg.source.content.end()),
+      start_line_lexeme(current),
+      lexeme_line(0) { }
 
-    inline bool empty() const {
-      return this->current == this->_end;
+    inline bool empty() const noexcept {
+      return this->current == this->end_src;
     }
 
-    inline std::size_t max_safe() const {
-      return this->_end - this->current;
-    }
-
-    inline bool safe(std::size_t const count) const {
-      return this->max_safe() >= count;
-    }
-
-    char advance() {
+    char advance() noexcept {
       char advanced = *this->current++;
       if ( advanced == '\n' ) {
         this->cfg.source.lines.emplace_back(
           this->start_line, this->current
         );
         this->start_line = this->current;
-        this->_current_line++;
       }
       return advanced;
     }
 
-    void consume() {
+    void consume() noexcept {
       this->start_lexeme = this->current;
-      this->_start_line = this->_current_line;
+      this->start_line_lexeme = this->start_line;
+      this->lexeme_line = this->cfg.source.lines.size();
     }
 
-    inline char peek(std::ptrdiff_t n = 0) const {
+    inline std::size_t max_safe() const noexcept {
+      return this->end_src - this->current;
+    }
+
+    inline bool safe(std::size_t n = 1) const noexcept {
+      return this->max_safe() >= n;
+    }
+
+    inline char peek(std::ptrdiff_t n = 0) const noexcept {
       return *(this->current + n);
     }
 
-    inline bool match(char expected) {
+    inline bool match(char expected) noexcept {
       return this->peek() == expected ?
         (this->advance(), true) : false;
     }
 
-    inline bool match_next(char expected) {
+    inline bool match_next(char expected) noexcept {
       return (this->advance(), this->match(expected));
     }
 
-    inline std::string_view lexeme() const {
+    inline std::string_view lexeme() const noexcept {
       return { this->start_lexeme, this->current };
     }
 
-    void report_error_at(SyntaxError const& error) {
-      this->cfg.errors.emplace(error);
+    char erase() noexcept {
+      char erased = *this->current;
+      this->cfg.source.content.erase(this->current);
+      return (this->end_src--, erased);
     }
 
-    void report_error(std::string_view msg, std::string_view fix = "") {
-      this->cfg.errors.emplace(
-        msg, fix,
-        this->start_location(),
-        this->current_location()
-      );
+    char replace(char new_char) noexcept {
+      char old_char = *this->current;
+      *this->current = new_char;
+      return old_char;
     }
 
-    Token make_token(Token::Kind kind) {
+    inline Location lexeme_location() const noexcept {
+      return {
+        this->lexeme_line,
+        this->start_lexeme - this->start_line_lexeme,
+        this->start_lexeme - this->start_src
+      };
+    }
+
+    inline Location current_location() const noexcept {
+      return {
+        this->cfg.source.lines.size(),
+        this->current - this->start_line,
+        this->current - this->start_src,
+      };
+    }
+
+    Token make_token(Token::Kind kind) noexcept {
       Token token{
-        kind,
-        this->lexeme(),
-        this->start_location(),
+        kind, this->lexeme(),
+        this->lexeme_location(),
         this->current_location()
       };
       return (this->consume(), token);
     }
 
-    Location start_location() const {
-      auto start_line = this->_start_line == this->_current_line ?
-        this->start_line : this->cfg.source.lines.at(this->_start_line - 1).begin;
-      return {
-        this->_start_line,
-        this->start_lexeme - start_line,
-        this->start_lexeme - this->_start
-      };
+    inline void report_error_at(Location start, Location end, std::string_view msg, std::string_view fix = "") noexcept {
+      this->cfg.errors.emplace(msg, fix, start, end);
     }
 
-    Location current_location() const {
-      auto start_line = this->cfg.source.lines.size() ?
-        this->cfg.source.lines.back().end : this->_start;
-      return {
-        this->_current_line,
-        this->current - start_line,
-        this->current - this->_start
-      };
-    }
-
-    char erase() {
-      char erased = this->peek();
-      this->cfg.source.content.erase(this->current);
-      return (this->_end--, erased);
-    }
-
-    char replace(char new_char) {
-      char old_char = this->peek();
-      *this->current = new_char;
-      return old_char;
+    inline void report_error(std::string_view msg, std::string_view fix = "") noexcept {
+      this->report_error_at(
+        this->lexeme_location(),
+        this->current_location(),
+        msg, fix
+      );
     }
   };
 }

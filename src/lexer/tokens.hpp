@@ -64,7 +64,7 @@ namespace rat::lexer {
   }();
 
   std::ostream& operator<<(std::ostream& out, Location const& L) {
-    return out << "Location(line=" << L.line
+    return out << "Location(line=" << L.line + 1
       << ", column=" << L.column
       << ", offset=" << L.offset << ')';
   }

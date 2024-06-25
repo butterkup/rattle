@@ -10,20 +10,7 @@ namespace rat::lexer {
     bool isidchar(char c) {
       return std::isalnum(c) or c == '_';
     }
-    bool isoperator(char c) {
-      switch ( c ) {
-      case '+':
-      case '%':
-      case '>':
-      case '<':
-      case '=':
-      case '!':
-      case '*':
-      case '/':
-      case '-': return true;
-      default: return false;
-      }
-    }
+
     bool isspace(char c) {
       switch ( c ) {
       case ' ':
@@ -34,6 +21,7 @@ namespace rat::lexer {
       default: return false;
       }
     }
+
     bool isbinary(char c) {
       switch ( c ) {
       case '0':
@@ -41,6 +29,7 @@ namespace rat::lexer {
       default: return false;
       }
     }
+
     bool isoctal(char c) {
       switch ( c ) {
       case '0':
@@ -54,6 +43,7 @@ namespace rat::lexer {
       default: return false;
       }
     }
+
     bool isdecimal(char c) {
       if ( isoctal(c) ) return true;
       switch ( c ) {
