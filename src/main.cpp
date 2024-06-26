@@ -27,8 +27,11 @@ auto main(int argc, char** argv) -> int {
     if ( state.cfg.errors.size() > 0 ) {
       std::cout << "\n Errors encountered in: '" << filepath << "'\n";
       size = 0;
+      auto striter = cfg.source.content.begin();
       while ( (size++, state.cfg.errors.size() > 0) ) {
-        std::cout << ' ' << size << ".  " << state.cfg.errors.front().msg << '\n';
+        auto error = state.cfg.errors.front();
+        std::string_view string{ striter + error.start.offset, striter + error.end.offset };
+        std::cout << ' ' << size << ".  " << error.msg << ": \"" << string << "\"\n";
         state.cfg.errors.pop();
       }
     }

@@ -30,9 +30,9 @@ namespace rat::lexer {
       return this->current == this->end_src;
     }
 
-    char advance() noexcept {
+    char advance(bool ignore_line = false) noexcept {
       char advanced = *this->current++;
-      if ( advanced == '\n' ) {
+      if ( not ignore_line and advanced == '\n' ) {
         this->cfg.source.lines.emplace_back(
           this->start_line, this->current
         );

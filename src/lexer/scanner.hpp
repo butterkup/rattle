@@ -31,7 +31,9 @@ namespace rat::lexer {
 
   Token scan(State& S) {
     using enum Token::Kind;
+    Location location_start;
     while ( (consume_space(S), not S.empty()) ) {
+      location_start = S.current_location();
       switch ( S.peek() ) {
       case '#': return S.make_token((consume_comment(S), HashTag));
       case '>':
@@ -53,7 +55,8 @@ namespace rat::lexer {
       case '@': return S.make_token(S.match_next('=') ? AtEqual : At);
       case '!': return S.make_token(
         S.match_next('=') ? NotEqual : (
-          S.report_error(
+          S.report_error_at(
+            location_start, S.current_location(),
             "Malformed operator '!=', '!' must be followed by '='.",
             "Add '=' after '!' or did you mean 'not', the keyword?"
           ), Error
@@ -76,9 +79,12 @@ namespace rat::lexer {
         else if ( utils::isidchar(S.peek()) )
           return S.make_token(consume_identifier(S));
         else return S.make_token((
-          S.report_error(
+          location_start = S.current_location(),
+          S.advance(),
+          S.report_error_at(
+            location_start, S.current_location(),
             "Unexpected character."
-          ), S.advance(), Error
+          ), Error
           ));
       }
     }

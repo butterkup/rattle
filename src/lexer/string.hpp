@@ -19,6 +19,7 @@ namespace rat::lexer {
 
     Token::Kind escape_seqs(State& S, Token::Kind kind = Token::Kind::Eot) {
       using Token::Kind::Error;
+      auto start = S.current_location();
       switch ( S.peek(1) ) {
       case '0':
       case '1':
@@ -35,16 +36,36 @@ namespace rat::lexer {
       case 'n':
         S.erase();
         S.replace('\n');
-        S.advance();
+        S.advance(true);
         break;
       case 'f':
         S.erase();
         S.replace('\f');
         S.advance();
         break;
+      case 't':
+        S.erase();
+        S.replace('\t');
+        S.advance();
+        break;
+      case 'r':
+        S.erase();
+        S.replace('\r');
+        S.advance();
+        break;
       case 'v':
         S.erase();
         S.replace('\v');
+        S.advance();
+        break;
+      case 'a':
+        S.erase();
+        S.replace('\a');
+        S.advance();
+        break;
+      case 'b':
+        S.erase();
+        S.replace('\b');
         S.advance();
         break;
       case '\'':
@@ -62,7 +83,8 @@ namespace rat::lexer {
             S.replace(ch); S.advance(); break;
           } else  return (
             S.advance(), S.advance(),
-            S.report_error(
+            S.report_error_at(
+              start, S.current_location(),
               "Invalid escape sequence, '\\xXX'",
               "Make sure the two characters after '\\x' "
               "literal are hexadecimal values."
@@ -71,20 +93,30 @@ namespace rat::lexer {
         } else return (
           S.advance(),
           S.advance(),
-          S.report_error(
-            "Invalid escape sequence for '\\x', expected '\\xXX'."
+          S.report_error_at(
+            start, S.current_location(),
+            "Invalid escape sequence for '\\x', expected '\\xXX'"
+            " where X is a hexadecimal literal."
           ), Error
           );
       }
       default: return (
         S.advance(),
         S.advance(),
-        S.report_error(
+        S.report_error_at(
+          start, S.current_location(),
           "Unexpected escaped character."
         ), Error
         );
       }
       return kind;
+    }
+
+    Token::Kind consume_escape(State& S, Token::Kind kind = Token::Kind::Eot) {
+      return not S.safe(2) ? (S.report_error(
+        "Missing escaped character.",
+        "Remove backslash as it lacks the escapee."
+      ), Token::Kind::Error) : escape_seqs(S, kind);
     }
 
     Token::Kind consume_long_string(State& S, const char quote) {
@@ -99,15 +131,10 @@ namespace rat::lexer {
             "Unterminated multiline string, EOF received before closing quote trio.",
             "Add triple closing quote as the last characters in the file to close the string."
           ), Token::Kind::Error);
-        if ( S.match(quote) and S.safe(2) and S.match(quote) and S.match(quote) )
-          return kind;
         if ( S.peek() == '\\' )
-          if ( not S.safe(2) )
-            return (S.report_error(
-              "Missing escaped character.",
-              "Remove backslash as it lacks the escapee."
-            ), Token::Kind::Error);
-          else kind = escape_seqs(S, kind);
+          kind = consume_escape(S, kind);
+        else if ( S.match(quote) and S.safe(2) and S.match(quote) and S.match(quote) )
+          return kind;
       }
     }
 
@@ -129,7 +156,7 @@ namespace rat::lexer {
           return (S.report_error(
             "Single line string was unterminated or spans more than one line"
           ), Token::Kind::Error);
-        kind = escape_seqs(S, kind);
+        kind = consume_escape(S, kind);
       }
     }
 
