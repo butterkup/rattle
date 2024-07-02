@@ -4,14 +4,14 @@ fn hello(name) {
 }
 
 fn sum(*numbers) {
-  let total = 0;
-  for ( let number in numbers )
+  total = 0;
+  for ( number in numbers )
     total += number;
   return total;
 }
 
 fn count(start, stop) {
-  let step = 1 if start <= stop else -1;
+  step = 1 if start <= stop else -1;
   while ( start < stop ) {
     print("Current: value=%s" % start);
     start += step;
@@ -19,16 +19,16 @@ fn count(start, stop) {
 }
 
 fn starmap(function, *iterators) {
-  for ( let args in zip(*iterators) )
+  for ( args in zip(*iterators) )
     yield function(*args);
 }
 
-let greeter = fn name "Hello %s, how was your day?" % name
+greeter = fn name "Hello %s, how was your day?" % name;
 
-let identity = fn x x;
-let x2 = fn(x) 2 * x;
-let x3 = fn x { return 3 * x; };
-let r4 = fn() { return 4 };
-let r5 = fn() 5;
-let x5p6 = fn(x, y) (5 * x, 6 + y);
-let gen = fn x yield x3(x);
+identity = fn x x;
+x2 = fn(x) 2 * x;
+x3 = fn x { return 3 * x; };
+r4 = fn() { return 4 };
+r5 = fn() 5;
+x5p6 = fn(x, y) (5 * x, 6 + y);
+gen = fn x yield x3(x);

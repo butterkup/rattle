@@ -1,15 +1,16 @@
 try {
-  raise BaseError;
-} except (AssertionError) {
-  print("Caught AssertError");
-} except (ZeroDivisionError as e) {
-  print("Tried to divide by zero: %s" % e);
+  raise SomeError;
+} except SomeError as e {
+  print("Caught SomeError: %s" % e);
+  raise e; # Reraise error e
+} except ZeroDivisionError {
+  print("Caught ZeroDivisionError");
+  raise; # Reraise ZeroDivisionError
 } except {
-  # Catch all types of error: BaseError
-  print("I dont care about the error");
-  raise; # reraise the current error
+  print("Caught something");
+  raise; # Reraise whatever was caught
 } else {
-  print("No Error Occurred");
+  print("No error occurred");
 } lastly {
-  print("Clean UP");
+  print("That's enough error for the day");
 }

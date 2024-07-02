@@ -6,7 +6,6 @@ TOKEN_KIND(Eot) // end of tokens marker
 TOKEN_KIND(Raise)
 TOKEN_KIND(Class)
 TOKEN_KIND(Fn)
-TOKEN_KIND(Let)
 TOKEN_KIND(As)
 TOKEN_KIND(Import)
 TOKEN_KIND(In)

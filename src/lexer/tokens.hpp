@@ -55,11 +55,11 @@ namespace rat::lexer {
   const auto Keywords = [] {
     using enum Token::Kind;
     return std::unordered_map<std::string_view, Token::Kind>{
-      {"raise", Raise}, { "class", Class }, { "fn", Fn }, { "let", Let }, { "as", As },
+      {"raise", Raise}, { "class", Class }, { "fn", Fn }, { "as", As }, { "from", From },
       { "import", Import }, { "in", In }, { "not", Not }, { "and", And }, { "or", Or },
       { "try", Try }, { "else", Else }, { "if", If }, { "while", While }, { "for", For },
       { "except", Except }, { "lastly", Lastly }, { "return", Return }, { "with", With },
-      { "assert", Assert }, { "from", From }, { "true", True }, { "false", False }
+      { "assert", Assert }, { "true", True }, { "false", False }
     };
   }();
 

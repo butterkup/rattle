@@ -1,0 +1,17 @@
+c = 90;
+d = 2, 7;
+a, b = 1, 2;
+a, *b, c = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+# if a variable already exists, its
+# value is overwritten, otherwise it
+# is created in the current scope
+
+{
+  # the following a and b are local variables
+  b = 5;
+  a = b * 9;
+  # bind c to global c: this c is not local
+  global c;
+  c = a + b;
+}
