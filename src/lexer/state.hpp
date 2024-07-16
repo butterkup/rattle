@@ -109,15 +109,25 @@ namespace rat::lexer {
       return (this->consume(), token);
     }
 
-    inline void report_error_at(Location start, Location end, std::string_view msg, std::string_view fix = "") noexcept {
+    inline void report_error(Location start, Location end, std::string_view msg, std::string_view fix = "") noexcept {
       this->cfg.errors.emplace(msg, fix, start, end);
     }
 
     inline void report_error(std::string_view msg, std::string_view fix = "") noexcept {
-      this->report_error_at(
+      this->report_error(
         this->lexeme_location(),
         this->current_location(),
         msg, fix
+      );
+    }
+
+    inline void report_error(
+      Location start,
+      std::string_view msg,
+      std::string_view fix = ""
+    ) {
+      this->report_error(
+        start, this->current_location(), msg, fix
       );
     }
   };

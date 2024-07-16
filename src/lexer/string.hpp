@@ -83,8 +83,7 @@ namespace rat::lexer {
             S.replace(ch); S.advance(); break;
           } else  return (
             S.advance(), S.advance(),
-            S.report_error_at(
-              start, S.current_location(),
+            S.report_error(start,
               "Invalid escape sequence, '\\xXX'",
               "Make sure the two characters after '\\x' "
               "literal are hexadecimal values."
@@ -93,8 +92,7 @@ namespace rat::lexer {
         } else return (
           S.advance(),
           S.advance(),
-          S.report_error_at(
-            start, S.current_location(),
+          S.report_error(start,
             "Invalid escape sequence for '\\x', expected '\\xXX'"
             " where X is a hexadecimal literal."
           ), Error
@@ -103,8 +101,7 @@ namespace rat::lexer {
       default: return (
         S.advance(),
         S.advance(),
-        S.report_error_at(
-          start, S.current_location(),
+        S.report_error(start,
           "Unexpected escaped character."
         ), Error
         );

@@ -40,8 +40,7 @@ namespace rat::lexer {
         auto start_loc = S.current_location();
         if ( consume_if(S, utils::isidchar) ) {
           kind = Token::Kind::Error;
-          S.report_error_at(start_loc,
-            S.current_location(),
+          S.report_error(start_loc,
             invalid_literal_msg, fix);
         }
       }) ? kind : Token::Kind::Eot;

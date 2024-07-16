@@ -55,8 +55,8 @@ namespace rat::lexer {
       case '@': return S.make_token(S.match_next('=') ? AtEqual : At);
       case '!': return S.make_token(
         S.match_next('=') ? NotEqual : (
-          S.report_error_at(
-            location_start, S.current_location(),
+          S.report_error(
+            location_start,
             "Malformed operator '!=', '!' must be followed by '='.",
             "Add '=' after '!' or did you mean 'not', the keyword?"
           ), Error
@@ -81,8 +81,8 @@ namespace rat::lexer {
         else return S.make_token((
           location_start = S.current_location(),
           S.advance(),
-          S.report_error_at(
-            location_start, S.current_location(),
+          S.report_error(
+            location_start,
             "Unexpected character."
           ), Error
           ));

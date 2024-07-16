@@ -25,6 +25,10 @@ TOKEN_KIND(Assert)
 TOKEN_KIND(From)
 TOKEN_KIND(True)
 TOKEN_KIND(False)
+TOKEN_KIND(NonLocal)
+TOKEN_KIND(Global)
+TOKEN_KIND(Del)
+TOKEN_KIND(Yield)
 
 TOKEN_KIND(Comma) // ,
 TOKEN_KIND(HashTag) // #

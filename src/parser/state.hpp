@@ -43,7 +43,7 @@ namespace rat::parser {
       lexer::Location end,
       std::string_view msg,
       std::string_view fix = "") {
-      this->source.report_error_at(
+      this->source.report_error(
         start, end, msg, fix
       );
     }
@@ -64,6 +64,15 @@ namespace rat::parser {
       std::string_view fix = "") {
       this->report_error(
         tk_start.start, tk_end.end, msg, fix
+      );
+    }
+
+    inline void report_error(
+      std::string_view msg,
+      std::string_view fix = ""
+    ) {
+      this->report_error(
+        this->peek(), msg, fix
       );
     }
   };
