@@ -17,14 +17,15 @@
 
 "Single line\x0a string"
 'Another One'
-"""
-This is a
-Multiline string
-"with a string"
-'inside it'
-"""
-'''
-Another Multiline
-String Here
-\'''what a joke\'''
-'''
+"\
+This is a\
+Multiline string\
+\"with a string\"\
+'inside it'\
+"
+'\
+Another Multiline\
+String Here\
+\'what a joke\'\
+'
+

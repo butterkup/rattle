@@ -1,0 +1,5 @@
+CompileFlags:
+  Add: [ -std=c++23, -I/home/simon/Content/work/rattle/include/, -Wall ]
+  Compiler: clang++
+  CompilationDatabase: .clang.db
+

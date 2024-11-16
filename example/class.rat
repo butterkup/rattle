@@ -1,37 +1,38 @@
 class Person {
   # Class Variables
-  name = "";
-  age = 0;
-  
+  name = ""
+  age = 0
+
+  # Methods
   fn __init__(self, name, age) {
     # Instance Variables
-    self.name = name;
-    self.age = age;
+    self.name = name
+    self.age = age
   }
   fn __str__(self) {
     return "Person(name='%s', age=%s)" % (
       self.name, self.age
-    );
+    )
   }
   fn __bool__(self) {
-    return self.name and self.age;
+    return self.name and self.age
   }
   fn __add__(self, other) {
     return Person(
       self.name + other.name,
       self.age + other.age
-    );
+    )
   }
   fn greet(self) {
-    return "Hello %s?" % self.name;
+    return "Hello %s?" % self.name
   }
 }
 
-p1 = Person("Person One", 10);
-p2 = Person("Person Two", 15);
-p3 = p1 + p2;
+p1 = Person("Person One", 10)
+p2 = Person("Person Two", 15)
+p3 = p1 + p2
 
-print(p3) # Person(name='Person OnePerson Two', age=25);
+print(p3) # Person(name='Person OnePerson Two', age=25)
 print(p3.greet); # bound method
 print(Person.greet); # function greet
 print(Person.greet(p1) == p1.greet()); # true

@@ -1,16 +1,16 @@
 try {
-  raise SomeError;
+  raise SomeError
 } except SomeError as e {
-  print("Caught SomeError: %s" % e);
-  raise e; # Reraise error e
+  print("Caught SomeError: %s" % e)
+  raise e # Reraise error e
 } except ZeroDivisionError {
-  print("Caught ZeroDivisionError");
+  print("Caught ZeroDivisionError")
   raise; # Reraise ZeroDivisionError
 } except {
-  print("Caught something");
-  raise; # Reraise whatever was caught
+  print("Caught something")
+  raise # Reraise whatever was caught
 } else {
-  print("No error occurred");
+  print("No error occurred")
 } lastly {
-  print("That's enough error for the day");
+  print("That's enough error for the day")
 }

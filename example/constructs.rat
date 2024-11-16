@@ -1,0 +1,44 @@
+# control flow constructs
+
+for index in range(100) {
+  print("%s ** 2 = %s" % index, index ** 2)
+}
+
+counter = 100
+while counter {
+  print("counter: %s" % counter)
+  if counter == 50 {
+    print("halfway, be patient")
+  }
+  counter -= 1
+}
+
+if counter == 0 {
+  print("You waited it out.")
+} else {
+  print("You stopped at %s" % counter)
+}
+
+number = 34
+
+if number % 4 == 0 {
+  print("Divisible by 4")
+} elif number == 30 {
+  print("Is thirty")
+} elif not number {
+  print("Special zero")
+} else {
+  print("Must be lucky today!")
+}
+
+with open("constructs.rat") as f {
+  print("Contents:")
+  for line_number, line in enumerate(file, 1) {
+    print("  %s: %s" % (line_number, line))
+  }
+}
+
+with open("one.txt") as f1, open("two.txt", "w") as f2 {
+  f2.write(f1.read())
+}
+
