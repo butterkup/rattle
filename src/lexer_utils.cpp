@@ -1,5 +1,6 @@
 #include "lexer.hpp"
 #include <rattle/lexer.hpp>
+#include <rattle/token_category.hpp>
 #include <stdexcept>
 
 namespace rattle::lexer {
@@ -38,7 +39,30 @@ namespace rattle::lexer {
 
   bool isalnum(char c) { return std::isalnum(c) or c == '_'; }
 
-  bool isbinary(char c) {
+  bool isspace(char c) {
+    switch (c) {
+    case ' ':
+    case '\t':
+    case '\n':
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool numend(char c) {
+    switch (c) {
+#define TK_INCLUDE TK_SINGLEALL
+#define TK_MACRO(_, ch) case ch:
+#include <rattle/token_macro.hpp>
+    case '\\':
+      return true;
+    default:
+      return isspace(c);
+    }
+  }
+
+  bool isbin(char c) {
     switch (c) {
     case '0':
     case '1':
@@ -48,7 +72,7 @@ namespace rattle::lexer {
     }
   }
 
-  bool isoctal(char c) {
+  bool isoct(char c) {
     switch (c) {
     case '0':
     case '1':
@@ -64,23 +88,17 @@ namespace rattle::lexer {
     }
   }
 
-  bool isdecimal(char c) {
-    if (isoctal(c)) {
-      return true;
-    }
+  bool isdec(char c) {
     switch (c) {
     case '8':
     case '9':
       return true;
     default:
-      return false;
+      return isoct(c);
     }
   }
 
-  bool ishexadecimal(char c) {
-    if (isdecimal(c)) {
-      return true;
-    }
+  bool ishex(char c) {
     switch (c) {
     case 'a':
     case 'b':
@@ -96,7 +114,7 @@ namespace rattle::lexer {
     case 'F':
       return true;
     default:
-      return false;
+      return isdec(c);
     }
   }
 } // namespace rattle::lexer

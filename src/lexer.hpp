@@ -10,9 +10,11 @@ namespace rattle::lexer {
   token::Token consume_number(State &lexer);
   token::Token consume_identifier(State &lexer);
   bool isalnum(char c);
-  bool isdecimal(char c);
-  bool isoctal(char c);
-  bool ishexadecimal(char c);
-  bool isbinary(char c);
+  bool isspace(char c);
+  bool numend(char c);
+  bool isdec(char c);
+  bool isoct(char c);
+  bool ishex(char c);
+  bool isbin(char c);
 } // namespace rattle::lexer
 

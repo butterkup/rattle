@@ -60,7 +60,7 @@ namespace rattle {
             (state.match_next('=') ? Kind::RshiftEqual : Kind::Rshift) :
             (state.match_next('=') ? Kind::GreaterEqual : Kind::Greater));
       default:
-        if (lexer::isdecimal(state.peek())) return lexer::consume_number(state);
+        if (lexer::isdec(state.peek())) return lexer::consume_number(state);
         if (lexer::isalnum(state.peek())) return lexer::consume_identifier(state);
         state.advance(); return state.make_token(error_t::invalid_character);
         // clang-format on

@@ -1,12 +1,12 @@
 #ifndef TK_MACRO
-#error "Must define macro TK_MACRO(kind, string_rep)"
+#error "Must define macro TK_MACRO(kind, string_rep) to include this template."
 #define TK_MACRO(_, __) // to stop clangd from complaining, unreachable
 #endif
 
 #include "token_category.hpp"
 
 #ifndef TK_INCLUDE
-#define TK_INCLUDE TK_ALL
+#define TK_INCLUDE (TK_ALL & ~TK_SINGLE)
 #endif
 
 #if TK_INCLUDE & TK_SPECIAL
@@ -46,6 +46,16 @@ TK_MACRO(None, "None")
 #endif
 
 #if TK_INCLUDE & TK_SYMBOL
+#if TK_INCLUDE & TK_SINGLE
+TK_MACRO(Comma, ',')
+TK_MACRO(HashTag, '#')
+TK_MACRO(OpenBrace, '{')
+TK_MACRO(CloseBrace, '}')
+TK_MACRO(OpenParen, '(')
+TK_MACRO(CloseParen, ')')
+TK_MACRO(OpenBracket, '[')
+TK_MACRO(CloseBracket, ']')
+#else
 TK_MACRO(Comma, ",")
 TK_MACRO(HashTag, "#")
 TK_MACRO(OpenBrace, "{")
@@ -54,6 +64,7 @@ TK_MACRO(OpenParen, "(")
 TK_MACRO(CloseParen, ")")
 TK_MACRO(OpenBracket, "[")
 TK_MACRO(CloseBracket, "]")
+#endif
 #endif
 
 #if TK_INCLUDE & TK_PRIMARY
@@ -67,6 +78,9 @@ TK_MACRO(Floating, "")
 #endif
 
 #if TK_INCLUDE & TK_ASSIGN
+#if TK_INCLUDE & TK_SINGLE
+TK_MACRO(Equal, '=')
+#else
 TK_MACRO(Equal, "=")
 TK_MACRO(PlusEqual, "+=")
 TK_MACRO(MinusEqual, "-=")
@@ -80,29 +94,42 @@ TK_MACRO(BitAndEqual, "&=")
 TK_MACRO(InvertEqual, "~=")
 TK_MACRO(AtEqual, "@=")
 #endif
-
-#if TK_INCLUDE & TK_OPCMP
-TK_MACRO(NotEqual, "!=")
-TK_MACRO(EqualEqual, "==")
-TK_MACRO(Less, "<")
-TK_MACRO(LessEqual, "<=")
-TK_MACRO(Greater, ">")
-TK_MACRO(GreaterEqual, ">=")
 #endif
 
-#if TK_INCLUDE & TK_OPOTHER
+#if TK_INCLUDE & TK_OPS
+#if TK_INCLUDE & TK_SINGLE
+TK_MACRO(Less, '<')
+TK_MACRO(Greater, '>')
+TK_MACRO(Dot, '.')
+TK_MACRO(Plus, '+')
+TK_MACRO(Minus, '-')
+TK_MACRO(Star, '*')
+TK_MACRO(Percent, '%')
+TK_MACRO(Slash, '/')
+TK_MACRO(BitOr, '|')
+TK_MACRO(BitAnd, '&')
+TK_MACRO(Invert, '~')
+TK_MACRO(At, '@')
+#else
+TK_MACRO(Lshift, "<<")
+TK_MACRO(Rshift, ">>")
+TK_MACRO(NotEqual, "!=")
+TK_MACRO(EqualEqual, "==")
+TK_MACRO(LessEqual, "<=")
+TK_MACRO(GreaterEqual, ">=")
+TK_MACRO(Less, "<")
+TK_MACRO(Greater, ">")
 TK_MACRO(Dot, ".")
 TK_MACRO(Plus, "+")
 TK_MACRO(Minus, "-")
 TK_MACRO(Star, "*")
 TK_MACRO(Percent, "%")
 TK_MACRO(Slash, "/")
-TK_MACRO(Lshift, "<<")
-TK_MACRO(Rshift, ">>")
 TK_MACRO(BitOr, "|")
 TK_MACRO(BitAnd, "&")
 TK_MACRO(Invert, "~")
 TK_MACRO(At, "@")
+#endif
 #endif
 
 #undef TK_INCLUDE
