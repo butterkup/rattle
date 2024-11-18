@@ -1,18 +1,27 @@
-CXX=g++ -std=c++20
-CXXFLAGS=-fPIC -Wall -Iinclude
+CUR_DIR=.
+INCLUDE_DIR=$(CUR_DIR)/include
+SRC_DIR=$(CUR_DIR)/src
+LIB_DIR=$(CUR_DIR)/lib
+LIBRARY=$(LIB_DIR)/librattle.so
+PROGRAM=main
 
-SOURCES=src/lexer/number.cpp src/lexer/string.cpp src/lexer/scanner.cpp src/lexer/state.cpp src/lexer/utility.cpp
+CXX=g++ -std=c++20 -I$(INCLUDE_DIR)
+CXXFLAGS=-fPIC -Wall -O2
+
+SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)
 OBJECTS=$(subst .cpp,.o,$(SOURCES))
+TO_CLEAN=$(OBJECTS) $(PROGRAM) $(LIBRARY)
 
-main: main.cpp librattle.so
-	$(CXX) -Wall -Iinclude -o $@ $< -L. -Wl,-rpath=. -lrattle
+all: $(PROGRAM)
 
-librattle.so: $(OBJECTS)
+$(PROGRAM): main.cpp $(LIBRARY)
+	$(CXX) -Wall -O2 -o $@ $< -L$(LIB_DIR) -Wl,-rpath=$(LIB_DIR) -lrattle
+
+$(LIBRARY): $(OBJECTS)
+	mkdir -p $(LIB_DIR)
 	$(CXX) -shared -fPIC $^ -o $@
-
-$(OBJECTS): $(SOURCES)
 
 .PHONY+=clean
 clean:
-	rm -rfv $(OBJECTS) librattle.so main
+	rm -rfv $(TO_CLEAN)
 

@@ -8,7 +8,7 @@
 
 namespace fs = std::filesystem;
 
-struct PrintableToken {
+template <bool procloc = false> struct PrintableToken {
   rattle::lexer::Token const &token;
   std::string const &content;
 };
@@ -19,7 +19,14 @@ std::ostream &operator<<(std::ostream &out,
              << ", o=" << loc.offset << ')';
 }
 
-std::ostream &operator<<(std::ostream &out, PrintableToken const &p) {
+std::ostream &operator<<(std::ostream &out,
+                         rattle::lexer::__detail::proc_loc const &p) {
+  return out << '(' << p.start << ", " << p.end << ", " << (p.end - p.start)
+             << ')';
+}
+
+template <bool procloc>
+std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
   std::string_view content;
   switch (p.token.kind) {
   case rattle::lexer::Token::Kind::Eos:
@@ -29,28 +36,29 @@ std::ostream &operator<<(std::ostream &out, PrintableToken const &p) {
     content = "(Eot)";
     break;
   default:
-    content = rattle::lexer::token_content(p.content, p.token.start.offset,
-                                           p.token.end.offset);
+    content = rattle::lexer::token_content(
+      p.content, procloc ? p.token.proc.start : p.token.start.offset,
+      procloc ? p.token.proc.end : p.token.end.offset);
   }
   return out << "Token(" << rattle::lexer::to_string(p.token.kind)
              << ", \x1b[91;1m" << content << "\x1b[0m, start=" << p.token.start
-             << ", end=" << p.token.end << ')';
+             << ", end=" << p.token.end << ", .proc=" << p.token.proc << ')';
 }
 
 void _lex_file(std::string &&content, std::string const &file) {
   rattle::Lexer lexer(content);
+  std::string const &pstr = lexer.get_content();
   for (;;) {
     rattle::lexer::Token token = lexer.scan();
     std::cout << PrintableToken(token, content) << '\n';
+    std::cout << PrintableToken<true>(token, pstr) << '\n';
     if (token.kind == rattle::lexer::Token::Kind::Eot) {
       break;
     }
   }
-  while (lexer.errors.size()) {
-    rattle::lexer::Error &error = lexer.errors.front();
+  for (auto &error : lexer.errors) {
     std::cerr << file << ": Error(" << rattle::lexer::to_string(error.type)
               << ", " << error.start << ", " << error.end << ")\n";
-    lexer.errors.pop_front();
   }
 }
 

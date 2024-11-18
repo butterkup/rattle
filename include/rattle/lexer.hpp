@@ -15,6 +15,7 @@ namespace rattle {
     struct Location {
       std::size_t line, column, offset;
     };
+
     struct Error {
       error_t type;
       Location start, end;
@@ -26,12 +27,17 @@ namespace rattle {
 #define TK_MACRO(kind, _) kind,
 #include "token_macro.hpp"
       };
+
+      struct proc_loc {
+        std::size_t start, end;
+      };
     } // namespace __detail
 
     struct Token {
       using Kind = __detail::token_kind;
       Kind kind;
       Location start, end;
+      __detail::proc_loc proc;
     };
 
     std::string_view token_content(std::string const &content,
@@ -43,14 +49,15 @@ namespace rattle {
       std::string &content;
       std::deque<Error> &errors;
       Location curloc, lexloc;
-      std::string::iterator iter;
+      std::string::iterator iter, lexstart;
 
       char advance_loc(char ch);
+      __detail::proc_loc proc_loc() const;
 
     public:
       State(std::string &content, std::deque<Error> &errors)
         : content(content), errors(errors), curloc{1, 0, 0}, lexloc{1, 0, 0},
-          iter(content.begin()) {}
+          iter(content.begin()), lexstart(iter) {}
       void reset();
       bool empty() const;
       char advance();
@@ -91,6 +98,5 @@ namespace rattle {
     std::string reset(std::string &&content = "");
     std::string const &get_content() const;
   };
-
 } // namespace rattle
 

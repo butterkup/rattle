@@ -1,4 +1,3 @@
-#include <cassert>
 #include <rattle/lexer.hpp>
 #include <string_view>
 
@@ -8,6 +7,11 @@ namespace rattle::lexer {
   char State::advance() { return this->advance_loc(*iter++); }
   bool State::safe(std::size_t n) const { return max_safe() > n; }
   std::size_t State::max_safe() const { return content.end() - iter; }
+
+  void State::consume_lexeme() {
+    lexloc = curloc;
+    lexstart = iter;
+  }
 
   bool State::match_next(char expected) {
     return (advance(), safe() and match(expected));
@@ -27,7 +31,6 @@ namespace rattle::lexer {
     *iter++ = new_char;
   }
 
-  void State::consume_lexeme() { lexloc = curloc; }
   std::string_view State::lexeme() const {
     auto size = curloc.offset - lexloc.offset;
     return {&(*(iter - size)), size};
@@ -45,9 +48,17 @@ namespace rattle::lexer {
             .offset = curloc.offset};
   }
 
+  __detail::proc_loc State::proc_loc() const {
+    auto const begin = content.begin();
+    return {.start = static_cast<std::size_t>(lexstart - begin),
+            .end = static_cast<std::size_t>(iter - begin)};
+  }
+
   Token State::make_token(Token::Kind kind) {
-    Token token = {
-      .kind = kind, .start = lexeme_location(), .end = current_location()};
+    Token token = {.kind = kind,
+                   .start = lexeme_location(),
+                   .end = current_location(),
+                   .proc = proc_loc()};
     consume_lexeme();
     return token;
   }
@@ -62,7 +73,7 @@ namespace rattle::lexer {
   }
 
   void State::reset() {
-    iter = content.begin();
+    lexstart = iter = content.begin();
     lexloc = curloc = {1, 0, 0};
   }
 
