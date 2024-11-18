@@ -1,6 +1,10 @@
 # Hello World in rattle
 
 print(
+  '\x30\x31\x32\x33'
+);
+
+print(
   "Hello World",
   'How are you?'
 )

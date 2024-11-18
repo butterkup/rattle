@@ -1,38 +1,39 @@
 #include "lexer.hpp"
-#include <bits/types/error_t.h>
 #include <rattle/lexer.hpp>
 
 namespace rattle {
-  token::Token Lexer::scan() {
-    using Kind = token::Token::Kind;
+  using lexer::error_t, lexer::Token;
+
+  Token Lexer::scan() {
+    using Kind = Token::Kind;
     while ((lexer::consume_space(state), not state.empty())) {
       switch (state.peek()) {
       case '\\':
         if (state.safe(2)) {
           if (state.match_next('\n')) {
-            state.advance();
             state.consume_lexeme();
             break;
           } else {
             state.advance();
-            return state.make_token(error_t::globl_invalid_escapee);
+            state.advance();
+            return state.make_token(error_t::invalid_escape_sequence);
           }
         } else {
           state.advance();
-          return state.make_token(error_t::globl_escapee_missing);
+          return state.make_token(error_t::unterminated_escape_sequence);
         }
         // clang-format off
       case ';':
-      case '\n':return state.make_token(Kind::Eos);
-      case '#': lexer::consume_comment(state); break;
-      case '.': return state.make_token(Kind::Dot);
-      case ',': return state.make_token(Kind::Comma);
-      case '(': return state.make_token(Kind::OpenParen);
-      case ')': return state.make_token(Kind::CloseParen);
-      case '{': return state.make_token(Kind::OpenBrace);
-      case '}': return state.make_token(Kind::CloseBrace);
-      case '[': return state.make_token(Kind::OpenBracket);
-      case ']': return state.make_token(Kind::CloseBracket);
+      case '\n':return state.make_token((state.advance(), Kind::Eos));
+      case '#': return lexer::consume_comment(state);
+      case '.': return state.make_token((state.advance(), Kind::Dot));
+      case ',': return state.make_token((state.advance(), Kind::Comma));
+      case '(': return state.make_token((state.advance(), Kind::OpenParen));
+      case ')': return state.make_token((state.advance(), Kind::CloseParen));
+      case '{': return state.make_token((state.advance(), Kind::OpenBrace));
+      case '}': return state.make_token((state.advance(), Kind::CloseBrace));
+      case '[': return state.make_token((state.advance(), Kind::OpenBracket));
+      case ']': return state.make_token((state.advance(), Kind::CloseBracket));
       case '@': return state.make_token(state.match_next('=') ? Kind::AtEqual: Kind::At);
       case '=': return state.make_token(state.match_next('=') ? Kind::EqualEqual: Kind::Equal);
       case '-': return state.make_token(state.match_next('=') ? Kind::MinusEqual: Kind::Minus);
@@ -48,7 +49,7 @@ namespace rattle {
       case '!':
         return state.match_next('=') ?
             state.make_token(Kind::NotEqual) :
-            state.make_token(error_t::malformed_not_equal);
+            state.make_token(error_t::incomplete_not_equal_operator);
       case '<':
         return state.make_token(
           state.match_next('<') ?
@@ -62,11 +63,28 @@ namespace rattle {
       default:
         if (lexer::isdec(state.peek())) return lexer::consume_number(state);
         if (lexer::isalnum(state.peek())) return lexer::consume_identifier(state);
-        state.advance(); return state.make_token(error_t::invalid_character);
+        state.advance(); return state.make_token(error_t::unrecognized_character);
         // clang-format on
       }
     }
     return state.make_token(Kind::Eot);
   }
+
+  std::string Lexer::reset(std::string const &content) {
+    auto processed = std::move(this->content);
+    this->content = content;
+    errors.clear();
+    state.reset();
+    return processed;
+  }
+
+  std::string Lexer::reset(std::string &&content) {
+    this->content.swap(content);
+    errors.clear();
+    state.reset();
+    return content;
+  }
+
+  std::string const &Lexer::get_content() const { return this->content; }
 } // namespace rattle
 

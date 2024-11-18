@@ -13,19 +13,19 @@
 0x1288abcdefABCDEF0123456789
 12345678910
 0o1234567654321
-02343827713
+# 02343827713 # Error, leading zero in decimal
 
 "Single line\x0a string"
 'Another One'
-"\
-This is a\
-Multiline string\
-\"with a string\"\
-'inside it'\
 "
-'\
-Another Multiline\
-String Here\
-\'what a joke\'\
-'
+This is a
+Multiline string
+\"with a string\"
+'inside it'
+"
+"
+Another Multiline
+String Here
+\'what a joke\'
+"
 

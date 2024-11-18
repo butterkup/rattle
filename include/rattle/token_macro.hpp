@@ -3,7 +3,7 @@
 #define TK_MACRO(_, __) // to stop clangd from complaining, unreachable
 #endif
 
-#include "token_category.hpp"
+#include "category.hpp"
 
 #ifndef TK_INCLUDE
 #define TK_INCLUDE (TK_ALL & ~TK_SINGLE)
@@ -134,3 +134,4 @@ TK_MACRO(At, "@")
 
 #undef TK_INCLUDE
 #undef TK_MACRO
+

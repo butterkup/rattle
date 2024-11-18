@@ -1,5 +1,7 @@
 #pragma once
 
+#define LEXER_ERROR 0x01
+
 #define TK_KEYWORD  0x01
 #define TK_SYMBOL   0x02
 #define TK_SPECIAL  0x04

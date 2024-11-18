@@ -1,0 +1,13 @@
+#testing eos tokens
+
+value = 1+2* \
+  3>4-5/(\
+  6<<7
+
+square = value*value;
+
+cube = value*value*
+  value
+
+suare = square-value; cube = cube+value # both eos markers in same line
+
