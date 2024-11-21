@@ -41,7 +41,7 @@ std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
       procloc ? p.token.proc.end : p.token.end.offset);
   }
   return out << "Token(" << rattle::lexer::to_string(p.token.kind)
-             << ", \x1b[91;1m" << content << "\x1b[0m, start=" << p.token.start
+             << ", \x1b[32m" << content << "\x1b[0m, start=" << p.token.start
              << ", end=" << p.token.end << ", .proc=" << p.token.proc << ')';
 }
 
@@ -57,8 +57,11 @@ void _lex_file(std::string &&content, std::string const &file) {
     }
   }
   for (auto &error : lexer.errors) {
-    std::cerr << file << ": Error(" << rattle::lexer::to_string(error.type)
-              << ", " << error.start << ", " << error.end << ")\n";
+    std::cerr << file << ": Error(\x1b[31m"
+              << rattle::lexer::to_string(error.type) << "\x1b[0m, \x1b[91;1m"
+              << rattle::lexer::token_content(content, error.start.offset,
+                                              error.end.offset)
+              << "\x1b[0m, " << error.start << ", " << error.end << ")\n";
   }
 }
 

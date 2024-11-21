@@ -37,7 +37,7 @@ TK_MACRO(With, "with")
 TK_MACRO(Assert, "assert")
 TK_MACRO(From, "from")
 TK_MACRO(True, "True")
-TK_MACRO(False, "Talse")
+TK_MACRO(False, "False")
 TK_MACRO(NonLocal, "nonlocal")
 TK_MACRO(Global, "global")
 TK_MACRO(Del, "del")
@@ -98,6 +98,9 @@ TK_MACRO(AtEqual, "@=")
 
 #if TK_INCLUDE & TK_OPS
 #if TK_INCLUDE & TK_SINGLE
+#if TK_INCLUDE & TK_FIRST
+TK_MACRO(NotEqual, '!')
+#endif
 TK_MACRO(Less, '<')
 TK_MACRO(Greater, '>')
 TK_MACRO(Dot, '.')

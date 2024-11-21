@@ -1,11 +1,11 @@
 CUR_DIR=.
-INCLUDE_DIR=$(CUR_DIR)/include
+INC_DIR=$(CUR_DIR)/include
 SRC_DIR=$(CUR_DIR)/src
 LIB_DIR=$(CUR_DIR)/lib
 LIBRARY=$(LIB_DIR)/librattle.so
 PROGRAM=main
 
-CXX=g++ -std=c++20 -I$(INCLUDE_DIR)
+CXX=g++ -std=c++20 -I$(INC_DIR)
 CXXFLAGS=-fPIC -Wall -O2
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)
@@ -19,7 +19,7 @@ $(PROGRAM): main.cpp $(LIBRARY)
 
 $(LIBRARY): $(OBJECTS)
 	mkdir -p $(LIB_DIR)
-	$(CXX) -shared -fPIC $^ -o $@
+	$(CXX) -shared -fPIC $(OBJECTS) -o $@
 
 .PHONY+=clean
 clean:

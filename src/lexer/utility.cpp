@@ -59,7 +59,7 @@ namespace rattle::lexer {
 
   bool numend(char c) {
     switch (c) {
-#define TK_INCLUDE TK_SINGLEALL
+#define TK_INCLUDE TK_FIRSTALL
 #define TK_MACRO(_, ch) case ch:
 #include <rattle/token_macro.hpp>
     case '\\':

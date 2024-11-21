@@ -70,21 +70,13 @@ namespace rattle {
     return state.make_token(Kind::Eot);
   }
 
-  std::string Lexer::reset(std::string const &content) {
-    auto processed = std::move(this->content);
-    this->content = content;
+  std::string Lexer::reset(std::string input) {
+    std::swap(content, input);
     errors.clear();
     state.reset();
-    return processed;
+    return input;
   }
 
-  std::string Lexer::reset(std::string &&content) {
-    this->content.swap(content);
-    errors.clear();
-    state.reset();
-    return content;
-  }
-
-  std::string const &Lexer::get_content() const { return this->content; }
+  std::string const &Lexer::get_content() const { return content; }
 } // namespace rattle
 

@@ -1,5 +1,5 @@
 #include "lexer.hpp"
-#include <functional>
+#include <concepts>
 #include <rattle/lexer.hpp>
 
 namespace rattle::lexer {
@@ -12,11 +12,11 @@ namespace rattle::lexer {
       return numend(ch);
     }
   }
-  template <error_t error, char separator>
-  static std::size_t
-  number_seq(State &state, std::function<bool(char)> const &pred,
-             Token::Kind &kind,
-             std::function<bool(char)> const &isatend = numend) {
+
+  template <error_t error, char separator, std::predicate<char> Predicate>
+  static std::size_t number_seq(State &state, Predicate const &pred,
+                                Token::Kind &kind,
+                                Predicate const &isatend = numend) {
     std::size_t count = 0;
     while (not state.empty()) {
       if (pred(state.peek())) {
@@ -31,6 +31,10 @@ namespace rattle::lexer {
             kind = Token::Kind::Error;
           } else if (pred(state.peek(1))) {
             state.advance_erase();
+          } else {
+            state.advance();
+            state.report(error_t::trailing_numeric_separator, loc);
+            kind = Token::Kind::Error;
           }
         } else {
           state.advance();
@@ -48,12 +52,14 @@ namespace rattle::lexer {
     }
     return count;
   }
+
   template <char separator> static Token consume_number_helper(State &state) {
     Token::Kind kind = Token::Kind::Decimal;
     if (state.peek() == '0') {
       state.advance();
       if (state.safe()) {
         switch (state.peek()) {
+        case 'X':
         case 'x':
           state.advance();
           kind = Token::Kind::Hexadecimal;
@@ -63,6 +69,7 @@ namespace rattle::lexer {
             kind = Token::Kind::Error;
           }
           return state.make_token(kind);
+        case 'O':
         case 'o':
           state.advance();
           kind = Token::Kind::Octal;
@@ -72,6 +79,7 @@ namespace rattle::lexer {
             kind = Token::Kind::Error;
           }
           return state.make_token(kind);
+        case 'B':
         case 'b':
           state.advance();
           kind = Token::Kind::Binary;
@@ -90,6 +98,7 @@ namespace rattle::lexer {
         }
       }
     }
+
     number_seq<error_t::invalid_dec_character, separator>(state, isdec, kind,
                                                           fltend);
     if (not state.empty()) {

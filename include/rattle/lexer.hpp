@@ -27,7 +27,6 @@ namespace rattle {
 #define TK_MACRO(kind, _) kind,
 #include "token_macro.hpp"
       };
-
       struct proc_loc {
         std::size_t start, end;
       };
@@ -42,8 +41,8 @@ namespace rattle {
 
     std::string_view token_content(std::string const &content,
                                    std::size_t start, std::size_t end);
-    const char *to_string(lexer::Token::Kind kind);
-    const char *to_string(lexer::error_t error);
+    const char *to_string(Token::Kind kind);
+    const char *to_string(error_t error);
 
     class State {
       std::string &content;
@@ -89,13 +88,10 @@ namespace rattle {
   public:
     std::deque<lexer::Error> errors;
 
-    Lexer(std::string const &_content)
-      : content(_content), state(content, errors), errors() {}
-    Lexer(std::string &&_content)
+    Lexer(std::string _content)
       : content(std::move(_content)), state(content, errors), errors() {}
     lexer::Token scan();
-    std::string reset(std::string const &content);
-    std::string reset(std::string &&content = "");
+    std::string reset(std::string content = std::string());
     std::string const &get_content() const;
   };
 } // namespace rattle
