@@ -33,6 +33,10 @@ ERROR_MACRO(empty_dec_literal)
 ERROR_MACRO(empty_bin_literal)
 #endif
 
+#if ERROR_INCLUDE & PARSER_ERROR
+ERROR_MACRO(unterminated_brace)
+#endif
+
 #undef ERROR_INCLUDE
 #undef ERROR_MACRO
 

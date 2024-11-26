@@ -5,7 +5,7 @@ LIB_DIR=$(CUR_DIR)/lib
 LIBRARY=$(LIB_DIR)/librattle.so
 PROGRAM=main
 
-CXX=g++ -std=c++20 -I$(INC_DIR)
+CXX=clang++ -std=c++20 -I$(INC_DIR)
 CXXFLAGS=-fPIC -Wall -O2
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)

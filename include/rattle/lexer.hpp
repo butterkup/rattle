@@ -22,6 +22,7 @@ namespace rattle {
       Error(error_t type, Location const &start, Location const &end)
         : type(type), start(start), end(end) {}
     };
+
     namespace __detail {
       enum class token_kind {
 #define TK_MACRO(kind, _) kind,
@@ -54,9 +55,16 @@ namespace rattle {
       __detail::proc_loc proc_loc() const;
 
     public:
+      State(State &&) = delete;
+      State(State const &) = delete;
       State(std::string &content, std::deque<Error> &errors)
         : content(content), errors(errors), curloc{1, 0, 0}, lexloc{1, 0, 0},
           iter(content.begin()), lexstart(iter) {}
+      State(std::string &content, std::deque<Error> &errors, State const &state)
+        : content(content), errors(errors), curloc{state.curloc},
+          lexloc{state.lexloc}, iter{content.begin() + curloc.offset},
+          lexstart{content.begin() + lexloc.offset} {}
+
       void reset();
       bool empty() const;
       char advance();
@@ -88,8 +96,16 @@ namespace rattle {
   public:
     std::deque<lexer::Error> errors;
 
+    Lexer(): content(), state(content, errors), errors() {}
     Lexer(std::string _content)
       : content(std::move(_content)), state(content, errors), errors() {}
+    Lexer(Lexer const &lexer)
+      : content(lexer.content), state(content, errors, lexer.state),
+        errors(lexer.errors) {}
+    Lexer(Lexer &&lexer)
+      : content(std::move(lexer.content)), state(content, errors, lexer.state),
+        errors(std::move(lexer.errors)) {}
+
     lexer::Token scan();
     std::string reset(std::string content = std::string());
     std::string const &get_content() const;

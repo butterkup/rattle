@@ -47,11 +47,11 @@ std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
 
 void _lex_file(std::string &&content, std::string const &file) {
   rattle::Lexer lexer(content);
-  std::string const &pstr = lexer.get_content();
+  /*std::string const &pstr = lexer.get_content();*/
   for (;;) {
     rattle::lexer::Token token = lexer.scan();
     std::cout << PrintableToken(token, content) << '\n';
-    std::cout << PrintableToken<true>(token, pstr) << '\n';
+    /*std::cout << PrintableToken<true>(token, pstr) << '\n';*/
     if (token.kind == rattle::lexer::Token::Kind::Eot) {
       break;
     }
