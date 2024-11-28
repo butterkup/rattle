@@ -33,19 +33,18 @@ namespace rattle {
       State(State &&) = delete;
       State(State const &) = delete;
       State(Lexer &lexer, std::deque<lexer::Token> &stash,
-            std::deque<Error> &errors)
-        : lexer(lexer), stash(stash), errors(errors), hit_eot(false) {}
+            std::deque<Error> &errors);
       State(Lexer &lexer, std::deque<lexer::Token> &stash,
-            std::deque<Error> &errors, State const &state)
-        : lexer(lexer), stash(stash), errors(errors), hit_eot(state.hit_eot) {}
+            std::deque<Error> &errors, State const &state);
 
       lexer::Token get(bool ignore_comments = true);
       void unget(lexer::Token const &);
       bool empty() const;
       void report(error_t error, lexer::Location const &start,
                   lexer::Location const &end);
-      void report(error_t error, lexer::Location const &start);
-      void report(error_t error);
+      void report(error_t error, lexer::Token const &start,
+                  lexer::Token const &end);
+      void report(error_t error, lexer::Token const &token);
     };
   } // namespace parser
 
@@ -57,17 +56,12 @@ namespace rattle {
   public:
     std::deque<parser::Error> errors;
 
-    Parser(): lexer(), stash(), state(lexer, stash, errors), errors() {}
-    Parser(Lexer lexer)
-      : lexer(std::move(lexer)), stash(), state(lexer, stash, errors),
-        errors() {}
-    Parser(Parser const &parser)
-      : lexer(parser.lexer), stash(parser.stash),
-        state(lexer, stash, errors, parser.state), errors(parser.errors) {}
-    Parser(Parser &&parser)
-      : lexer(std::move(parser.lexer)), stash(std::move(parser.stash)),
-        state(lexer, stash, errors, parser.state),
-        errors(std::move(parser.errors)) {}
+    Parser();
+    Parser(Lexer lexer);
+    Parser(Parser const &parser);
+    Parser(Parser &&parser);
+    Parser &operator=(Parser &&parser);
+    Parser &operator=(Parser const &parser);
 
     std::unique_ptr<parser::nodes::Statement> parse();
     Lexer reset(Lexer lexer_ = Lexer());

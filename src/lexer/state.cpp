@@ -92,5 +92,14 @@ namespace rattle::lexer {
   Token State::make_token(error_t error) {
     return (report(error), make_token(Token::Kind::Error));
   }
+
+  State::State(std::string &content, std::deque<Error> &errors)
+    : content(content), errors(errors), curloc{1, 0, 0}, lexloc{1, 0, 0},
+      iter(content.begin()), lexstart(iter) {}
+  State::State(std::string &content, std::deque<Error> &errors,
+               State const &state)
+    : content(content), errors(errors), curloc{state.curloc},
+      lexloc{state.lexloc}, iter{content.begin() + curloc.offset},
+      lexstart{content.begin() + lexloc.offset} {}
 } // namespace rattle::lexer
 

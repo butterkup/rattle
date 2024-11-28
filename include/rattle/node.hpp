@@ -8,18 +8,29 @@
 namespace rattle::parser::nodes {
   struct Statement {};
 
-  struct Error: Statement {};
+  struct Error: Statement {
+    std::unique_ptr<Statement> malformed;
+  };
 
   struct Expression: Statement {
     lexer::Token operator_;
+    Expression(lexer::Token const &op): Statement(), operator_(op) {}
   };
 
   struct BinaryExpr: Expression {
-    Expression left_operand, right_operand;
+    std::unique_ptr<Expression> left_operand, right_operand;
+    BinaryExpr(lexer::Token const &operator_, std::unique_ptr<Expression> left,
+               std::unique_ptr<Expression> right)
+      : Expression(operator_), left_operand(std::move(left)),
+        right_operand(std::move(right)) {}
   };
 
   struct UnaryExpr: Expression {
-    Expression operand;
+    std::unique_ptr<Expression> operand;
+
+    UnaryExpr(lexer::Token const &operator_,
+              std::unique_ptr<Expression> operand)
+      : Expression(operator_), operand(std::move(operand)) {}
   };
 
   struct As: Statement {
@@ -29,6 +40,14 @@ namespace rattle::parser::nodes {
 
   struct Block: Statement {
     std::vector<std::unique_ptr<Statement>> statements;
+  };
+
+  struct Break: Statement {
+    lexer::Token identifier;
+  };
+
+  struct Continue: Statement {
+    lexer::Token identifier;
   };
 
   struct Else: Block {};
@@ -47,7 +66,9 @@ namespace rattle::parser::nodes {
   };
 
   struct Raise: Statement {
-    std::unique_ptr<Expression> target;
+    std::unique_ptr<Expression> value;
+    Raise(std::unique_ptr<Expression> value)
+      : Statement(), value(std::move(value)) {}
   };
 
   struct Class: Statement {
@@ -79,77 +100,123 @@ namespace rattle::parser::nodes {
   struct While: Statement {
     std::unique_ptr<Expression> condition;
     Block block;
+    While(std::unique_ptr<Expression> cond, Block body)
+      : Statement(), condition(std::move(cond)), block(std::move(body)) {}
   };
 
   struct For: Statement {
     lexer::Token alias;
     std::unique_ptr<Expression> iterable;
+    For(lexer::Token const &alias, std::unique_ptr<Expression> iterable)
+      : Statement(), alias(alias), iterable(std::move(iterable)) {}
   };
 
   struct Return: Statement {
     std::unique_ptr<Expression> value;
+    Return(std::unique_ptr<Expression> value)
+      : Statement(), value(std::move(value)) {}
   };
 
   struct Yield: Statement {
     std::unique_ptr<Expression> value;
+    Yield(std::unique_ptr<Expression> value)
+      : Statement(), value(std::move(value)) {}
   };
 
   struct With: Statement {
-    std::vector<As> contexts;
+    std::vector<std::unique_ptr<As>> contexts;
     Block block;
+    With(std::vector<std::unique_ptr<As>> ctx, Block body)
+      : Statement(), contexts(std::move(ctx)), block(std::move(body)) {}
   };
 
   struct Assert: Statement {
     std::unique_ptr<Expression> condition, message;
+    Assert(std::unique_ptr<Expression> cond, std::unique_ptr<Expression> msg)
+      : Statement(), condition(std::move(cond)), message(std::move(msg)) {}
   };
 
   struct NonLocal: Statement {
     std::vector<lexer::Token> identifiers;
+    NonLocal(std::vector<lexer::Token> ids)
+      : Statement(), identifiers(std::move(ids)) {}
   };
 
   struct Global: Statement {
     std::vector<lexer::Token> identifiers;
+    Global(std::vector<lexer::Token> ids)
+      : Statement(), identifiers(std::move(ids)) {}
   };
 
   struct Del: Statement {
     std::vector<lexer::Token> identifiers;
+    Del(std::vector<lexer::Token> ids)
+      : Statement(), identifiers(std::move(ids)) {}
   };
 
   struct Assignment: Statement {
     lexer::Token operator_;
-    std::unique_ptr<Expression> assigned, assignee;
+    std::unique_ptr<Expression> assignable, assignee;
   };
 
   struct LiteralExpr: Expression {};
 
-#define CREATE_NODE(Name, Base)                                                \
-  struct Name: Base {};
+#define INH_ASSIGN(_Name)                                                      \
+  struct _Name: Assignment {                                                   \
+    _Name(lexer::Token const &op, std::unique_ptr<Expression> assignable,      \
+          std::unique_ptr<Expression> assignee)                                \
+      : Assignment({}, op, std::move(assignable), std::move(assignee)) {}      \
+  }
 
-#define TK_MACRO(Name, _) CREATE_NODE(Name, Assignment)
+#define INH_BINARY_EXPR(_Name)                                                 \
+  struct _Name: BinaryExpr {                                                   \
+    _Name(lexer::Token const &op, std::unique_ptr<Expression> left,            \
+          std::unique_ptr<Expression> right)                                   \
+      : BinaryExpr(op, std::move(left), std::move(right)) {}                   \
+  }
+
+#define INH_UNARY_EXPR(_Name)                                                  \
+  struct _Name: UnaryExpr {                                                    \
+    _Name(lexer::Token const &op, std::unique_ptr<Expression> operand)         \
+      : UnaryExpr(op, std::move(operand)) {}                                   \
+  }
+
+#define INH_LITERAL_EXPR(_Name)                                                \
+  struct _Name: LiteralExpr {                                                  \
+    _Name(lexer::Token const &op): LiteralExpr({op}) {}                        \
+  }
+
+#define TK_MACRO(Name, _) INH_ASSIGN(Name);
 #define TK_INCLUDE TK_ASSIGN
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) CREATE_NODE(Name, LiteralExpr)
+#define TK_MACRO(Name, _) INH_LITERAL_EXPR(Name);
 #define TK_INCLUDE (TK_PRI_NUMBER | TK_PRIMARY | TK_KEYLITERAL)
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) CREATE_NODE(Name, BinaryExpr)
+#define TK_MACRO(Name, _) INH_BINARY_EXPR(Name);
 #define TK_INCLUDE (TK_KEYBINARY | TK_OPALL)
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) CREATE_NODE(Name, UnaryExpr)
+#define TK_MACRO(Name, _) INH_UNARY_EXPR(Name);
 #define TK_INCLUDE TK_KEYUNARY
 #include "token_macro.hpp"
 
-  struct UPlus: UnaryExpr {};
-  struct UMinus: UnaryExpr {};
-  struct Group: UnaryExpr {};
-  struct Separator: BinaryExpr {};
+  INH_UNARY_EXPR(UPlus);
+  INH_UNARY_EXPR(UMinus);
+  INH_UNARY_EXPR(Group);
+  INH_BINARY_EXPR(Separator);
 
-#undef CREATE_NODE
+#undef INH_LITERAL_EXPR
+#undef INH_ASSIGN
+#undef INH_UNARY_EXPR
+#undef INH_BINARY_EXPR
 
   struct AnonFn: Expression {
     std::unique_ptr<Expression> parameters, body;
+    AnonFn(lexer::Token const &op, std::unique_ptr<Expression> params,
+           std::unique_ptr<Expression> body)
+      : Expression(op), parameters(std::move(params)), body(std::move(body)) {}
   };
 
   // Visitor ABC

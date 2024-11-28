@@ -57,13 +57,9 @@ namespace rattle {
     public:
       State(State &&) = delete;
       State(State const &) = delete;
-      State(std::string &content, std::deque<Error> &errors)
-        : content(content), errors(errors), curloc{1, 0, 0}, lexloc{1, 0, 0},
-          iter(content.begin()), lexstart(iter) {}
-      State(std::string &content, std::deque<Error> &errors, State const &state)
-        : content(content), errors(errors), curloc{state.curloc},
-          lexloc{state.lexloc}, iter{content.begin() + curloc.offset},
-          lexstart{content.begin() + lexloc.offset} {}
+      State(std::string &content, std::deque<Error> &errors);
+      State(std::string &content, std::deque<Error> &errors,
+            State const &state);
 
       void reset();
       bool empty() const;
@@ -96,15 +92,12 @@ namespace rattle {
   public:
     std::deque<lexer::Error> errors;
 
-    Lexer(): content(), state(content, errors), errors() {}
-    Lexer(std::string _content)
-      : content(std::move(_content)), state(content, errors), errors() {}
-    Lexer(Lexer const &lexer)
-      : content(lexer.content), state(content, errors, lexer.state),
-        errors(lexer.errors) {}
-    Lexer(Lexer &&lexer)
-      : content(std::move(lexer.content)), state(content, errors, lexer.state),
-        errors(std::move(lexer.errors)) {}
+    Lexer();
+    Lexer(std::string _content);
+    Lexer(Lexer const &lexer);
+    Lexer(Lexer &&lexer);
+    Lexer &operator=(Lexer &&lexer);
+    Lexer &operator=(Lexer const &lexer);
 
     lexer::Token scan();
     std::string reset(std::string content = std::string());

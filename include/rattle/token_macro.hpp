@@ -37,6 +37,8 @@
  TK_MACRO(Global, "global")
  TK_MACRO(Del, "del")
  TK_MACRO(Yield, "yield")
+ TK_MACRO(Continue, "continue")
+ TK_MACRO(Break, "break")
 #endif
 
 #if TK_INCLUDE & TK_KEYUNARY

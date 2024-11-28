@@ -35,13 +35,14 @@ namespace rattle::lexer {
             kind = Kind::Error;
             auto loc = state.current_location();
             state.advance(); state.advance();
+            if(ishex(state.peek())) state.advance();
             state.report(error_t::invalid_escape_hex_sequence, loc);
           }
         } else {
           kind = Kind::Error;
           auto loc = state.current_location();
           state.advance(); state.advance();
-          if(state.safe()) state.advance();
+          if(state.safe() and ishex(state.peek())) state.advance();
           state.report(error_t::incomplete_escape_hex_sequence, loc);
         }                                                                break;
       default: {

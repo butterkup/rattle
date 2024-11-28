@@ -35,6 +35,12 @@ ERROR_MACRO(empty_bin_literal)
 
 #if ERROR_INCLUDE & PARSER_ERROR
 ERROR_MACRO(unterminated_brace)
+ERROR_MACRO(unterminated_paren)
+ERROR_MACRO(unterminated_bracket)
+ERROR_MACRO(dangling_brace)
+ERROR_MACRO(dangling_paren)
+ERROR_MACRO(dangling_bracket)
+ERROR_MACRO(expected_an_expression)
 #endif
 
 #undef ERROR_INCLUDE

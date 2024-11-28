@@ -77,6 +77,23 @@ namespace rattle {
     return input;
   }
 
+  Lexer &Lexer::operator=(Lexer &&lexer) {
+    ::new (this) Lexer(std::move(lexer));
+    return *this;
+  }
+  Lexer &Lexer::operator=(Lexer const &lexer) {
+    ::new (this) Lexer(lexer);
+    return *this;
+  }
   std::string const &Lexer::get_content() const { return content; }
+  Lexer::Lexer(): content(), state(content, errors), errors() {}
+  Lexer::Lexer(std::string _content)
+    : content(std::move(_content)), state(content, errors), errors() {}
+  Lexer::Lexer(Lexer const &lexer)
+    : content(lexer.content), state(content, errors, lexer.state),
+      errors(lexer.errors) {}
+  Lexer::Lexer(Lexer &&lexer)
+    : content(std::move(lexer.content)), state(content, errors, lexer.state),
+      errors(std::move(lexer.errors)) {}
 } // namespace rattle
 
