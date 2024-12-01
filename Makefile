@@ -31,5 +31,5 @@ $(LIBRARY): $(OBJECTS)
 .PHONY+=clean
 clean:
 	rm -rfv $(TO_CLEAN)
-	@[ -e $(LIB_DIR) ] && rmdir --ignore-fail-on-non-empty $(LIB_DIR)
+	@if [ -e $(LIB_DIR) ]; then rmdir --ignore-fail-on-non-empty $(LIB_DIR); fi
 

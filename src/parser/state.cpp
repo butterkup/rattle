@@ -1,4 +1,3 @@
-
 #include <deque>
 #include <rattle/lexer.hpp>
 #include <rattle/parser.hpp>
@@ -6,12 +5,17 @@
 namespace rattle::parser {
   lexer::Token State::get(bool ignore_comments) {
     if (stash.empty()) {
-      auto token = lexer.scan();
-      hit_eot = token.kind == lexer::Token::Kind::Eot;
-      return token;
+      while (true) {
+        auto token = lexer.scan();
+        hit_eot = token.kind == lexer::Token::Kind::Eot;
+        if (ignore_comments and token.kind == lexer::Token::Kind::HashTag) {
+          continue;
+        }
+        return token;
+      }
     }
-    auto token = std::move(stash.front());
-    stash.pop_front();
+    auto token = stash.back();
+    stash.pop_back();
     return token;
   }
 
@@ -28,7 +32,7 @@ namespace rattle::parser {
     errors.emplace_back(error, token.start, token.end);
   }
   bool State::empty() const { return hit_eot; }
-  void State::unget(lexer::Token const &token) { stash.push_front(token); }
+  void State::unget(lexer::Token const &token) { stash.push_back(token); }
 
   State::State(Lexer &lexer, std::deque<lexer::Token> &stash,
                std::deque<Error> &errors)

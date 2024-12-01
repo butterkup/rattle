@@ -1,6 +1,6 @@
 #include "rattle/lexer.hpp"
 #include <memory>
-#include <rattle/node.hpp>
+#include <rattle/parser_nodes.hpp>
 #include <rattle/parser.hpp>
 #include <utility>
 
@@ -22,7 +22,7 @@ namespace rattle {
       state(lexer, stash, errors, parser.state),
       errors(std::move(parser.errors)) {}
   Parser &Parser::operator=(Parser &&parser) {
-    ::new (this) Parser(parser);
+    ::new (this) Parser(std::move(parser));
     return *this;
   }
   Parser &Parser::operator=(Parser const &parser) {

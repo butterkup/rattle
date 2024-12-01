@@ -36,12 +36,12 @@
  TK_MACRO(NonLocal, "nonlocal")
  TK_MACRO(Global, "global")
  TK_MACRO(Del, "del")
- TK_MACRO(Yield, "yield")
  TK_MACRO(Continue, "continue")
  TK_MACRO(Break, "break")
 #endif
 
 #if TK_INCLUDE & TK_KEYUNARY
+ TK_MACRO(Yield, "yield")
  TK_MACRO(Not, "not")
 #endif
 
@@ -58,32 +58,17 @@
  TK_MACRO(None, "None")
 #endif
 
-#if TK_INCLUDE & TK_SYMBOL
-# if TK_INCLUDE & TK_SINGLE
-  TK_MACRO(Comma, ',')
-  TK_MACRO(HashTag, '#')
-  TK_MACRO(OpenBrace, '{')
-  TK_MACRO(CloseBrace, '}')
-  TK_MACRO(OpenParen, '(')
-  TK_MACRO(CloseParen, ')')
-  TK_MACRO(OpenBracket, '[')
-  TK_MACRO(CloseBracket, ']')
-# else
-  TK_MACRO(Comma, ",")
-  TK_MACRO(HashTag, "#")
-  TK_MACRO(OpenBrace, "{")
-  TK_MACRO(CloseBrace, "}")
-  TK_MACRO(OpenParen, "(")
-  TK_MACRO(CloseParen, ")")
-  TK_MACRO(OpenBracket, "[")
-  TK_MACRO(CloseBracket, "]")
-# endif
+#if TK_INCLUDE & TK_PRIBINARY
+ TK_MACRO(Separator, "")
+ TK_MACRO(AnonFn, "")
+ TK_MACRO(NotIn, "")
+ TK_MACRO(IsNot, "")
 #endif
 
 #if TK_INCLUDE & TK_PRIMARY
  TK_MACRO(Identifier, "")
  TK_MACRO(String, "")
-# if TK_INCLUDE & TK_PRI_NUMBER
+# if TK_INCLUDE & TK_PRINUMBER
   TK_MACRO(Number, "")
 # else
   TK_MACRO(Binary, "")
@@ -91,25 +76,6 @@
   TK_MACRO(Hexadecimal, "")
   TK_MACRO(Decimal, "")
   TK_MACRO(Floating, "")
-# endif
-#endif
-
-#if TK_INCLUDE & TK_ASSIGN
-# if TK_INCLUDE & TK_SINGLE
-  TK_MACRO(Equal, '=')
-# else
-  TK_MACRO(Equal, "=")
-  TK_MACRO(PlusEqual, "+=")
-  TK_MACRO(MinusEqual, "-=")
-  TK_MACRO(StarEqual, "*=")
-  TK_MACRO(PercentEqual, "%=")
-  TK_MACRO(SlashEqual, "/=")
-  TK_MACRO(LshiftEqual, "<<=")
-  TK_MACRO(RshiftEqual, ">>=")
-  TK_MACRO(BitOrEqual, "|=")
-  TK_MACRO(BitAndEqual, "&=")
-  TK_MACRO(InvertEqual, "~=")
-  TK_MACRO(AtEqual, "@=")
 # endif
 #endif
 
@@ -123,6 +89,7 @@
 # endif
 # if TK_INCLUDE & TK_OPOTHER
   TK_MACRO(Dot, '.')
+  TK_MACRO(Xor, '^')
   TK_MACRO(Plus, '+')
   TK_MACRO(Minus, '-')
   TK_MACRO(Star, '*')
@@ -144,6 +111,7 @@
 # endif
 # if TK_INCLUDE & TK_OPOTHER
   TK_MACRO(Dot, ".")
+  TK_MACRO(Xor, "^")
   TK_MACRO(Lshift, "<<")
   TK_MACRO(Rshift, ">>")
   TK_MACRO(Plus, "+")
@@ -155,6 +123,50 @@
   TK_MACRO(BitAnd, "&")
   TK_MACRO(Invert, "~")
   TK_MACRO(At, "@")
+# endif
+#endif
+
+#if TK_INCLUDE & TK_ASSIGN
+# if TK_INCLUDE & TK_SINGLE
+  TK_MACRO(Equal, '=')
+# else
+  TK_MACRO(Equal, "=")
+  TK_MACRO(XorEqual, "^=")
+  TK_MACRO(PlusEqual, "+=")
+  TK_MACRO(MinusEqual, "-=")
+  TK_MACRO(StarEqual, "*=")
+  TK_MACRO(PercentEqual, "%=")
+  TK_MACRO(SlashEqual, "/=")
+  TK_MACRO(LshiftEqual, "<<=")
+  TK_MACRO(RshiftEqual, ">>=")
+  TK_MACRO(BitOrEqual, "|=")
+  TK_MACRO(BitAndEqual, "&=")
+  TK_MACRO(InvertEqual, "~=")
+  TK_MACRO(AtEqual, "@=")
+# endif
+#endif
+
+#if TK_INCLUDE & TK_SYMBOL
+# if TK_INCLUDE & TK_SINGLE
+  TK_MACRO(Comma, ',')
+  TK_MACRO(Colon, ':')
+  TK_MACRO(HashTag, '#')
+  TK_MACRO(OpenBrace, '{')
+  TK_MACRO(CloseBrace, '}')
+  TK_MACRO(OpenParen, '(')
+  TK_MACRO(CloseParen, ')')
+  TK_MACRO(OpenBracket, '[')
+  TK_MACRO(CloseBracket, ']')
+# else
+  TK_MACRO(Comma, ",")
+  TK_MACRO(Colon, ":")
+  TK_MACRO(HashTag, "#")
+  TK_MACRO(OpenBrace, "{")
+  TK_MACRO(CloseBrace, "}")
+  TK_MACRO(OpenParen, "(")
+  TK_MACRO(CloseParen, ")")
+  TK_MACRO(OpenBracket, "[")
+  TK_MACRO(CloseBracket, "]")
 # endif
 #endif
 

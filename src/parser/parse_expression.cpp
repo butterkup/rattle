@@ -1,8 +1,10 @@
+#include "parser.hpp"
 #include "precedence.hpp"
-#include "rattle/lexer.hpp"
-#include "rattle/node.hpp"
-#include "rattle/parser.hpp"
+#include <cassert>
 #include <memory>
+#include <rattle/lexer.hpp>
+#include <rattle/parser.hpp>
+#include <rattle/parser_nodes.hpp>
 #include <utility>
 
 namespace rattle::parser {
@@ -13,54 +15,90 @@ namespace rattle::parser {
 #define _decl_unary(_name)                                                     \
   static UniqueExpr _name(State &state, prec prec, lexer::Token &token)
 #define _decl_binary(_name)                                                    \
-  static UniqueExpr _name(State &state, prec prec, lexer::Token &)
+  static UniqueExpr _name(State &state, prec prec, lexer::Token &token,        \
+                          UniqueExpr left)
 
   _decl_unary(parse_primary);
-  _decl_unary(parse_group);
+  _decl_unary(parse_paren);
+  _decl_unary(parse_brace);
+  _decl_unary(parse_bracket);
+  _decl_unary(parse_anonfn);
+  _decl_binary(parse_binary);
+  _decl_unary(parse_unary);
 
   struct PrecParser {
-    prec binary_prec, unary_prec;
+    prec unary_prec;
     ParseUnary unary_parser;
+    prec binary_prec;
     ParseBinary binary_parser;
   };
 
   // clang-format off
   static PrecParser get_token_prec(lexer::Token::Kind kind) {
+    using Kind = lexer::Token::Kind;
     switch(kind) {
-      case lexer::Token::Kind::Plus:          return {prec::plus,        prec::uplus,    nullptr,         nullptr};
-      case lexer::Token::Kind::Minus:         return {prec::minus,       prec::uminus,   nullptr,         nullptr};
-      case lexer::Token::Kind::Star:          return {prec::multiply,    prec::none,     nullptr,         nullptr};
-      case lexer::Token::Kind::Slash:         return {prec::divide,      prec::none,     nullptr,         nullptr};
-      case lexer::Token::Kind::Dot:           return {prec::dot,         prec::none,     nullptr,         nullptr};
-      case lexer::Token::Kind::OpenParen:     return {prec::call,        prec::group,    parse_group,     nullptr};
-      case lexer::Token::Kind::OpenBracket:   return {prec::subscript,   prec::none,     nullptr,         nullptr};
-      case lexer::Token::Kind::Floating:      return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::Binary:        return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::Decimal:       return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::Octal:         return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::Hexadecimal:   return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::String:        return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::True:          return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::None:          return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      case lexer::Token::Kind::False:         return {prec::none,        prec::primary,  parse_primary,   nullptr};
-      default:                                return {prec::none,        prec::none,     nullptr,         nullptr};
+      case Kind::Lshift:       return {prec::none,       nullptr,        prec::shift,      parse_binary};
+      case Kind::Rshift:       return {prec::none,       nullptr,        prec::shift,      parse_binary};
+      case Kind::NotEqual:     return {prec::none,       nullptr,        prec::not_equal,  parse_binary};
+      case Kind::EqualEqual:   return {prec::none,       nullptr,        prec::equal,      parse_binary};
+      case Kind::LessEqual:    return {prec::none,       nullptr,        prec::compare,    parse_binary};
+      case Kind::GreaterEqual: return {prec::none,       nullptr,        prec::compare,    parse_binary};
+      case Kind::Less:         return {prec::none,       nullptr,        prec::compare,    parse_binary};
+      case Kind::Greater:      return {prec::none,       nullptr,        prec::compare,    parse_binary};
+      case Kind::Dot:          return {prec::none,       nullptr,        prec::dot,        parse_binary};
+      case Kind::Xor:          return {prec::none,       nullptr,        prec::xor_,       parse_binary};
+      case Kind::Plus:         return {prec::uplus,      parse_unary,    prec::plus,       parse_binary};
+      case Kind::Minus:        return {prec::uminus,     parse_unary,    prec::minus,      parse_binary};
+      case Kind::Star:         return {prec::none,       nullptr,        prec::multiply,   parse_binary};
+      case Kind::Slash:        return {prec::none,       nullptr,        prec::divide,     parse_binary};
+      case Kind::Percent:      return {prec::none,       nullptr,        prec::modulus,    parse_binary};
+      case Kind::BitAnd:       return {prec::none,       nullptr,        prec::bit_and,    parse_binary};
+      case Kind::BitOr:        return {prec::none,       nullptr,        prec::bit_or,     parse_binary};
+      case Kind::Invert:       return {prec::invert,     parse_unary,    prec::none,       nullptr     };
+      case Kind::At:           return {prec::none,       nullptr,        prec::matmul,     parse_binary};
+
+      case Kind::Is:           return {prec::none,       nullptr,        prec::is,         parse_binary};
+      case Kind::In:           return {prec::none,       nullptr,        prec::in,         parse_binary};
+      case Kind::Not:          return {prec::logic_not,  parse_unary,    prec::none,       nullptr     };
+
+      case Kind::Fn:           return {prec::primary,    parse_anonfn,   prec::none,       nullptr     };
+      case Kind::Yield:        return {prec::yield,      parse_unary,    prec::none,       nullptr     };
+      case Kind::Colon:        return {prec::colon,      parse_unary,    prec::colon,      parse_binary};
+      case Kind::Comma:        return {prec::comma,      parse_unary,    prec::comma,      parse_binary};
+      case Kind::OpenParen:    return {prec::primary,    parse_paren,    prec::call,       nullptr     };
+      case Kind::OpenBracket:  return {prec::primary,    parse_bracket,  prec::subscript,  nullptr     };
+      case Kind::OpenBrace:    return {prec::primary,    parse_brace,    prec::none,       nullptr     };
+
+      case Kind::Floating:     return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::Binary:       return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::Decimal:      return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::Octal:        return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::Hexadecimal:  return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::String:       return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::Identifier:   return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+
+      case Kind::True:         return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::None:         return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+      case Kind::False:        return {prec::primary,    parse_primary,  prec::none,       nullptr     };
+
+      case Kind::Error:        return {prec::primary,    parse_unary,    prec::primary,    parse_binary};
+      default:                 return {prec::none,       nullptr,        prec::none,       nullptr     };
     }
   }
   // clang-format on
 
-  static UniqueExpr _parse_expression(State &state, prec threshold) {
-    UniqueExpr expression;
+  template <class GetToken>
+  static UniqueExpr _parse_expression(State &state, GetToken &&get_token,
+                                      prec threshold) {
     if (state.empty()) {
-      return expression;
+      return nullptr;
     }
-    auto token = state.get();
+    UniqueExpr expression;
+    auto token = get_token(state);
     auto parser = get_token_prec(token.kind);
     if (parser.unary_prec > threshold) {
-      if (parser.unary_parser) {
-        expression = parser.unary_parser(state, parser.unary_prec, token);
-      } else {
-        state.report(error_t::expected_an_expression, token);
-      }
+      assert(parser.unary_parser);
+      expression = parser.unary_parser(state, parser.unary_prec, token);
     } else {
       state.unget(token);
       return expression;
@@ -68,7 +106,8 @@ namespace rattle::parser {
     while (true) {
       token = state.get();
       parser = get_token_prec(token.kind);
-      if (parser.binary_prec > threshold && parser.binary_parser) {
+      assert(parser.binary_parser);
+      if (parser.binary_prec > threshold) {
         expression = parser.binary_parser(state, parser.binary_prec, token,
                                           std::move(expression));
       } else {
@@ -79,45 +118,132 @@ namespace rattle::parser {
   }
 
   UniqueExpr parse_expression(State &state) {
-    return _parse_expression(state, prec::_lowest);
+    return _parse_expression(
+      state, [](State &state) { return state.get(); }, prec::_lowest);
   }
 
   _decl_unary(parse_primary) {
-    using K = lexer::Token::Kind;
-    namespace N = nodes;
-    auto b = std::make_unique<N::LiteralExpr>(token);
     switch (token.kind) {
-    case K::Binary:
-    case K::Floating:
-    case K::Hexadecimal:
-    case K::Octal:
-    case K::Decimal:
-      return std::make_unique<N::Number>(token);
-    case K::String:
-      return std::make_unique<N::String>(token);
-    case K::True:
-      return std::make_unique<N::True>(token);
-    case K::False:
-      return std::make_unique<N::False>(token);
-    case K::None:
-      return std::make_unique<N::None>(token);
+    case lexer::Token::Kind::Binary:
+    case lexer::Token::Kind::Floating:
+    case lexer::Token::Kind::Hexadecimal:
+    case lexer::Token::Kind::Octal:
+    case lexer::Token::Kind::Decimal:
+      return std::make_unique<nodes::Number>(token);
+    case lexer::Token::Kind::Identifier:
+      return std::make_unique<nodes::Identifier>(token);
+    case lexer::Token::Kind::String:
+      return std::make_unique<nodes::String>(token);
+    case lexer::Token::Kind::True:
+      return std::make_unique<nodes::True>(token);
+    case lexer::Token::Kind::False:
+      return std::make_unique<nodes::False>(token);
+    case lexer::Token::Kind::None:
+      return std::make_unique<nodes::None>(token);
     default:
-      return {};
+      assert(false);
     }
   }
 
-  _decl_unary(parse_group) {
-    using K = lexer::Token::Kind;
-    auto operand = parse_expression(state);
-    if (operand.get() == nullptr) {
-      state.report(error_t::expected_an_expression, token);
+#define parse_right                                                            \
+  _parse_expression(state, [](State &state) { return get(state); }, --prec)
+
+  _decl_unary(parse_unary) {
+    switch (token.kind) {
+    case lexer::Token::Kind::Colon:
+    case lexer::Token::Kind::Comma:
+      return std::make_unique<nodes::Separator>(token, nullptr, parse_right);
+    case lexer::Token::Kind::Minus:
+      return std::make_unique<nodes::Minus>(token, nullptr, parse_right);
+    case lexer::Token::Kind::Plus:
+      return std::make_unique<nodes::Plus>(token, nullptr, parse_right);
+    case lexer::Token::Kind::Error:
+      return std::make_unique<nodes::UnaryExpr>(token, parse_right);
+    case lexer::Token::Kind::Yield:
+      return std::make_unique<nodes::Yield>(token, parse_right);
+    case lexer::Token::Kind::Not:
+      return std::make_unique<nodes::Not>(token, parse_right);
+    default:
+      assert(false);
     }
-    auto rparen = state.get();
-    if (rparen.kind != K::CloseParen) {
-      state.report(error_t::unterminated_paren, token);
-      state.unget(rparen);
-    }
-    return std::make_unique<nodes::Group>(token, std::move(operand));
   }
+
+  _decl_binary(parse_binary) {
+    switch (token.kind) {
+#define TK_MACRO(_Name, _)                                                     \
+  case lexer::Token::Kind::_Name:                                              \
+    return std::make_unique<nodes::_Name>(token, std::move(left), parse_right);
+#define TK_INCLUDE TK_OPALL
+#include <rattle/token_macro.hpp>
+
+    case lexer::Token::Kind::Colon:
+    case lexer::Token::Kind::Comma:
+      return std::make_unique<nodes::Separator>(token, std::move(left),
+                                                parse_right);
+    case lexer::Token::Kind::Not: {
+      auto token_ = state.get();
+      if (token_.kind != lexer::Token::Kind::In) {
+        state.report(error_t::incomplete_operator_notin, token);
+        state.unget(token_);
+      }
+      token.end = token_.end;
+      token.proc.end = token_.proc.end;
+      return std::make_unique<nodes::NotIn>(token, std::move(left),
+                                            parse_right);
+    }
+    case lexer::Token::Kind::Is: {
+      auto token_ = state.get();
+      if (token_.kind == lexer::Token::Kind::Not) {
+        token.end = token_.end;
+        token.proc.end = token_.proc.end;
+        return std::make_unique<nodes::IsNot>(token, std::move(left),
+                                              parse_right);
+      }
+      state.unget(token_);
+      return std::make_unique<nodes::Is>(token, std::move(left), parse_right);
+    }
+    default:
+      assert(false);
+    }
+  }
+
+  template <lexer::Token::Kind close, error_t unclosed>
+  _decl_unary(parseainer) {
+    auto operand = parse_right;
+    auto token_ = get(state);
+    if (token_.kind != close) {
+      state.report(unclosed, token);
+      state.unget(token_);
+    }
+    return std::make_unique<nodes::Container>(
+      token, nodes::Container::Type::None, std::move(operand));
+  }
+
+#undef parse_right
+
+  _decl_unary(parse_paren) {
+    return parseainer<lexer::Token::Kind::CloseParen,
+                      error_t::unterminated_paren>(state, prec, token);
+  }
+
+  _decl_unary(parse_bracket) {
+    return parseainer<lexer::Token::Kind::CloseBracket,
+                      error_t::unterminated_bracket>(state, prec, token);
+  }
+
+  _decl_unary(parse_brace) {
+    return parseainer<lexer::Token::Kind::CloseBrace,
+                      error_t::unterminated_brace>(state, prec, token);
+  }
+
+  _decl_unary(parse_anonfn) {
+    auto params = parse_expression(state);
+    auto body = parse_expression(state);
+    return std::make_unique<nodes::AnonFn>(token, std::move(params),
+                                           std::move(body));
+  }
+
+#undef _decl_unary
+#undef _decl_binary
 } // namespace rattle::parser
 

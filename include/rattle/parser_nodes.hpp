@@ -8,10 +8,6 @@
 namespace rattle::parser::nodes {
   struct Statement {};
 
-  struct Error: Statement {
-    std::unique_ptr<Statement> malformed;
-  };
-
   struct Expression: Statement {
     lexer::Token operator_;
     Expression(lexer::Token const &op): Statement(), operator_(op) {}
@@ -40,6 +36,8 @@ namespace rattle::parser::nodes {
 
   struct Block: Statement {
     std::vector<std::unique_ptr<Statement>> statements;
+    Block(std::vector<std::unique_ptr<Statement>> statements)
+      : Statement(), statements(std::move(statements)) {}
   };
 
   struct Break: Statement {
@@ -72,14 +70,23 @@ namespace rattle::parser::nodes {
   };
 
   struct Class: Statement {
-    std::unique_ptr<Expression> base;
     lexer::Token name;
-    Block body;
+    std::unique_ptr<Expression> bases;
+    std::unique_ptr<Block> body;
+    Class(lexer::Token const &name, std::unique_ptr<Expression> bases,
+          std::unique_ptr<Block> body)
+      : Statement(), name(name), bases(std::move(bases)),
+        body(std::move(body)) {}
   };
 
   struct Fn: Statement {
     lexer::Token name;
-    Block body;
+    std::unique_ptr<Expression> params;
+    std::unique_ptr<Block> body;
+    Fn(lexer::Token const &name, std::unique_ptr<Expression> params,
+       std::unique_ptr<Block> body)
+      : Statement(), name(name), params(std::move(params)),
+        body(std::move(body)) {}
   };
 
   struct Import: Statement {
@@ -114,12 +121,6 @@ namespace rattle::parser::nodes {
   struct Return: Statement {
     std::unique_ptr<Expression> value;
     Return(std::unique_ptr<Expression> value)
-      : Statement(), value(std::move(value)) {}
-  };
-
-  struct Yield: Statement {
-    std::unique_ptr<Expression> value;
-    Yield(std::unique_ptr<Expression> value)
       : Statement(), value(std::move(value)) {}
   };
 
@@ -161,6 +162,14 @@ namespace rattle::parser::nodes {
 
   struct LiteralExpr: Expression {};
 
+  struct Container: LiteralExpr {
+    enum class Type { None, Error, Dict, List, Tuple, Group } type;
+    std::unique_ptr<Expression> entries;
+    Container(lexer::Token const &op, Type type,
+              std::unique_ptr<Expression> entries)
+      : LiteralExpr({op}), type(type), entries(std::move(entries)) {}
+  };
+
 #define INH_ASSIGN(_Name)                                                      \
   struct _Name: Assignment {                                                   \
     _Name(lexer::Token const &op, std::unique_ptr<Expression> assignable,      \
@@ -191,7 +200,11 @@ namespace rattle::parser::nodes {
 #include "token_macro.hpp"
 
 #define TK_MACRO(Name, _) INH_LITERAL_EXPR(Name);
-#define TK_INCLUDE (TK_PRI_NUMBER | TK_PRIMARY | TK_KEYLITERAL)
+#define TK_INCLUDE (TK_PRINUMBER | TK_PRIMARY | TK_KEYLITERAL)
+#include "token_macro.hpp"
+
+#define TK_MACRO(Name, _) INH_BINARY_EXPR(Name);
+#define TK_INCLUDE TK_PRIBINARY
 #include "token_macro.hpp"
 
 #define TK_MACRO(Name, _) INH_BINARY_EXPR(Name);
@@ -202,22 +215,10 @@ namespace rattle::parser::nodes {
 #define TK_INCLUDE TK_KEYUNARY
 #include "token_macro.hpp"
 
-  INH_UNARY_EXPR(UPlus);
-  INH_UNARY_EXPR(UMinus);
-  INH_UNARY_EXPR(Group);
-  INH_BINARY_EXPR(Separator);
-
 #undef INH_LITERAL_EXPR
 #undef INH_ASSIGN
 #undef INH_UNARY_EXPR
 #undef INH_BINARY_EXPR
-
-  struct AnonFn: Expression {
-    std::unique_ptr<Expression> parameters, body;
-    AnonFn(lexer::Token const &op, std::unique_ptr<Expression> params,
-           std::unique_ptr<Expression> body)
-      : Expression(op), parameters(std::move(params)), body(std::move(body)) {}
-  };
 
   // Visitor ABC
 
@@ -231,11 +232,9 @@ namespace rattle::parser::nodes {
 #define TK_INCLUDE (TK_OPALL | TK_KEYBINARY | TK_KEYUNARY | TK_KEYLITERAL)
 #include "token_macro.hpp"
 
-    CREATE_VISIT(UPlus);
-    CREATE_VISIT(UMinus);
-    CREATE_VISIT(Group);
-    CREATE_VISIT(Separator);
-    CREATE_VISIT(AnonFn);
+    // To communicate expression errors
+    CREATE_VISIT(BinaryExpr);
+    CREATE_VISIT(UnaryExpr);
   };
 
   struct StatementVisitor: ExpressionVisitor {

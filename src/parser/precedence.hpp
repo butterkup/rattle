@@ -1,37 +1,41 @@
 #pragma once
 
-#include <utility>
 namespace rattle::parser {
   enum class prec : unsigned {
-    _lowest,   // Sentinel for lowest precedence, don't use.
-    none,      // All other tokens
-    group,     // (a)
-    subscript, // a[b]
-    dot,       // a.b
-    call,      // a()
-    matmul,    // a @ b
-    comma,     // Separator(Not an operator): a, b
-    multiply,  // a * b
-    divide,    // a / b
-    modulus,   // a % b
-    uplus,     // +a
-    uminus,    // -a
-    plus,      // a + b
-    minus,     // a - b
-    compare,   // a>b a>=b a<b a<=b
-    equal,     // a == b
-    not_equal, // a != b
-    shift,     // a<<b  a>>b
-    bit_and,   // a & b
-    bit_or,    // a | b
-    logic_and, // a and b
-    logic_or,  // a or b
-    logic_not, // not a
-    invert,    // ~a
-    is,        // a is b
-    in,        // a in seq
-    primary,   // True, None, False, Numbers, Strings and Variables
-    _highest,  // Sentinel for highest precedence, don't use.
+    none,              // All other tokens
+    _lowest,           // Sentinel for lowest precedence, don't use.
+    yield,             // yield <expr>
+    comma,             // a , b
+    colon,             // a : b
+    logic_or,          // a or b
+    logic_and,         // a and b
+    logic_not,         // not a
+    equal,             // a == b
+    not_equal = equal, // a != b
+    compare,           // a>b a>=b a<b a<=b
+    shift,             // a<<b  a>>b
+    bit_or,            // a | b
+    xor_,              // a ^ b
+    bit_and,           // a & b
+    is,                // a is b      a is not b
+    in,                // a in seq    a not in seq
+    plus,              // a + b
+    minus = plus,      // a - b
+    divide,            // a / b
+    modulus = divide,  // a % b
+    matmul,            // a @ b
+    multiply = matmul, // a * b
+    uplus,             // +a
+    uminus = uplus,    // -a
+    invert = uplus,    // ~a
+    subscript,         // a[b]
+    call,              // a()
+    dot,               // a.b
+    primary,           // All Litarals
+    _highest,          // Sentinel for highest precedence, don't use.
   };
+
+  prec operator--(prec const &p);
+  prec operator++(prec const &p);
 } // namespace rattle::parser
 

@@ -2,7 +2,7 @@
 
 #include "category.hpp"
 #include "lexer.hpp"
-#include "rattle/node.hpp"
+#include "parser_nodes.hpp"
 #include <deque>
 #include <memory>
 
@@ -36,7 +36,6 @@ namespace rattle {
             std::deque<Error> &errors);
       State(Lexer &lexer, std::deque<lexer::Token> &stash,
             std::deque<Error> &errors, State const &state);
-
       lexer::Token get(bool ignore_comments = true);
       void unget(lexer::Token const &);
       bool empty() const;
