@@ -3,12 +3,15 @@
 #include <rattle/parser.hpp>
 
 namespace rattle::parser {
-  lexer::Token State::get(bool ignore_comments) {
+  lexer::Token State::get(bool ignore_eos, bool ignore_comments) {
     if (stash.empty()) {
       while (true) {
         auto token = lexer.scan();
         hit_eot = token.kind == lexer::Token::Kind::Eot;
         if (ignore_comments and token.kind == lexer::Token::Kind::HashTag) {
+          continue;
+        }
+        if (ignore_eos and token.kind == lexer::Token::Kind::Eos) {
           continue;
         }
         return token;

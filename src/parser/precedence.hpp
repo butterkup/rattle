@@ -4,6 +4,7 @@ namespace rattle::parser {
   enum class prec : unsigned {
     none,              // All other tokens
     _lowest,           // Sentinel for lowest precedence, don't use.
+    as,                // some.expr.here as name
     yield,             // yield <expr>
     comma,             // a , b
     colon,             // a : b

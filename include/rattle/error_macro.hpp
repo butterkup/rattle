@@ -40,13 +40,8 @@ ERROR_MACRO(unterminated_bracket)
 ERROR_MACRO(dangling_brace)
 ERROR_MACRO(dangling_paren)
 ERROR_MACRO(dangling_bracket)
-ERROR_MACRO(expected_an_expression)
-ERROR_MACRO(colon_missing_value)
-ERROR_MACRO(colon_missing_key)
 ERROR_MACRO(incomplete_operator_notin)
-ERROR_MACRO(expected_params)
-ERROR_MACRO(expected_block)
-ERROR_MACRO(expected_identifier)
+ERROR_MACRO(expected_eos)
 #endif
 
 #undef ERROR_INCLUDE

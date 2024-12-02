@@ -1,16 +1,26 @@
+#include "parser.hpp"
 #include "rattle/lexer.hpp"
 #include <memory>
-#include <rattle/parser_nodes.hpp>
 #include <rattle/parser.hpp>
+#include <rattle/parser_nodes.hpp>
 #include <utility>
 
 namespace rattle {
-  std::unique_ptr<parser::nodes::Statement> Parser::parse() { return {}; }
+  std::vector<std::unique_ptr<parser::nodes::Statement>> Parser::parse() {
+    std::vector<std::unique_ptr<parser::nodes::Statement>> stmts;
+    while (not state.empty()) {
+      stmts.emplace_back(parser::parse_statement(state));
+    }
+    stmts.shrink_to_fit();
+    return stmts;
+  }
+
   Lexer Parser::reset(Lexer lexer_) {
     Lexer tmp = std::move(lexer);
     lexer = std::move(lexer_);
     return tmp;
   }
+
   Parser::Parser(): lexer(), stash(), state(lexer, stash, errors), errors() {}
   Parser::Parser(Lexer lexer)
     : lexer(std::move(lexer)), stash(), state(lexer, stash, errors), errors() {}
@@ -22,10 +32,12 @@ namespace rattle {
       state(lexer, stash, errors, parser.state),
       errors(std::move(parser.errors)) {}
   Parser &Parser::operator=(Parser &&parser) {
+    this->~Parser();
     ::new (this) Parser(std::move(parser));
     return *this;
   }
   Parser &Parser::operator=(Parser const &parser) {
+    this->~Parser();
     ::new (this) Parser(parser);
     return *this;
   }

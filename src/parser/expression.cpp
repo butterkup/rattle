@@ -63,6 +63,7 @@ namespace rattle::parser {
 
       case Kind::Fn:           return {prec::primary,    parse_anonfn,   prec::none,       nullptr     };
       case Kind::Yield:        return {prec::yield,      parse_unary,    prec::none,       nullptr     };
+      case Kind::As:           return {prec::none,       nullptr,        prec::as,         parse_binary};
       case Kind::Colon:        return {prec::colon,      parse_unary,    prec::colon,      parse_binary};
       case Kind::Comma:        return {prec::comma,      parse_unary,    prec::comma,      parse_binary};
       case Kind::OpenParen:    return {prec::primary,    parse_paren,    prec::call,       nullptr     };
@@ -87,14 +88,13 @@ namespace rattle::parser {
   }
   // clang-format on
 
-  template <class GetToken>
-  static UniqueExpr _parse_expression(State &state, GetToken &&get_token,
-                                      prec threshold) {
+  template <bool ignore_eos>
+  static UniqueExpr _parse_expression(State &state, prec threshold) {
     if (state.empty()) {
       return nullptr;
     }
     UniqueExpr expression;
-    auto token = get_token(state);
+    auto token = state.get(ignore_eos);
     auto parser = get_token_prec(token.kind);
     if (parser.unary_prec > threshold) {
       assert(parser.unary_parser);
@@ -118,8 +118,7 @@ namespace rattle::parser {
   }
 
   UniqueExpr parse_expression(State &state) {
-    return _parse_expression(
-      state, [](State &state) { return state.get(); }, prec::_lowest);
+    return _parse_expression<true>(state, prec::_lowest);
   }
 
   _decl_unary(parse_primary) {
@@ -145,8 +144,7 @@ namespace rattle::parser {
     }
   }
 
-#define parse_right                                                            \
-  _parse_expression(state, [](State &state) { return get(state); }, --prec)
+#define parse_right _parse_expression<true>(state, --prec)
 
   _decl_unary(parse_unary) {
     switch (token.kind) {
@@ -173,6 +171,7 @@ namespace rattle::parser {
 #define TK_MACRO(_Name, _)                                                     \
   case lexer::Token::Kind::_Name:                                              \
     return std::make_unique<nodes::_Name>(token, std::move(left), parse_right);
+      TK_MACRO(As, _)
 #define TK_INCLUDE TK_OPALL
 #include <rattle/token_macro.hpp>
 
@@ -208,9 +207,9 @@ namespace rattle::parser {
   }
 
   template <lexer::Token::Kind close, error_t unclosed>
-  _decl_unary(parseainer) {
+  _decl_unary(parse_container) {
     auto operand = parse_right;
-    auto token_ = get(state);
+    auto token_ = state.get(true);
     if (token_.kind != close) {
       state.report(unclosed, token);
       state.unget(token_);
@@ -222,18 +221,18 @@ namespace rattle::parser {
 #undef parse_right
 
   _decl_unary(parse_paren) {
-    return parseainer<lexer::Token::Kind::CloseParen,
-                      error_t::unterminated_paren>(state, prec, token);
+    return parse_container<lexer::Token::Kind::CloseParen,
+                           error_t::unterminated_paren>(state, prec, token);
   }
 
   _decl_unary(parse_bracket) {
-    return parseainer<lexer::Token::Kind::CloseBracket,
-                      error_t::unterminated_bracket>(state, prec, token);
+    return parse_container<lexer::Token::Kind::CloseBracket,
+                           error_t::unterminated_bracket>(state, prec, token);
   }
 
   _decl_unary(parse_brace) {
-    return parseainer<lexer::Token::Kind::CloseBrace,
-                      error_t::unterminated_brace>(state, prec, token);
+    return parse_container<lexer::Token::Kind::CloseBrace,
+                           error_t::unterminated_brace>(state, prec, token);
   }
 
   _decl_unary(parse_anonfn) {

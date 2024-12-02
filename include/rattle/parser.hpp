@@ -5,6 +5,7 @@
 #include "parser_nodes.hpp"
 #include <deque>
 #include <memory>
+#include <vector>
 
 namespace rattle {
   namespace parser {
@@ -36,7 +37,7 @@ namespace rattle {
             std::deque<Error> &errors);
       State(Lexer &lexer, std::deque<lexer::Token> &stash,
             std::deque<Error> &errors, State const &state);
-      lexer::Token get(bool ignore_comments = true);
+      lexer::Token get(bool ignore_eos = false, bool ignore_comments = true);
       void unget(lexer::Token const &);
       bool empty() const;
       void report(error_t error, lexer::Location const &start,
@@ -62,7 +63,7 @@ namespace rattle {
     Parser &operator=(Parser &&parser);
     Parser &operator=(Parser const &parser);
 
-    std::unique_ptr<parser::nodes::Statement> parse();
+    std::vector<std::unique_ptr<parser::nodes::Statement>> parse();
     Lexer reset(Lexer lexer_ = Lexer());
   };
 } // namespace rattle

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <memory>
-#include <rattle/parser_nodes.hpp>
 #include <rattle/parser.hpp>
+#include <rattle/parser_nodes.hpp>
 
 namespace rattle::parser {
   std::unique_ptr<nodes::Expression> parse_expression(State &state);
-  lexer::Token get(State &state, bool ignore_eos=true, bool ignore_comments=true);
-}
+  std::unique_ptr<nodes::Statement> parse_statement(State &state);
+} // namespace rattle::parser
 

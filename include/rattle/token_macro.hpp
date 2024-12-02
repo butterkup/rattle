@@ -20,7 +20,6 @@
  TK_MACRO(Raise, "raise")
  TK_MACRO(Class, "class")
  TK_MACRO(Fn, "fn")
- TK_MACRO(As, "as")
  TK_MACRO(Import, "import")
  TK_MACRO(Try, "try")
  TK_MACRO(Else, "else")
@@ -50,6 +49,7 @@
  TK_MACRO(In, "in")
  TK_MACRO(And, "and")
  TK_MACRO(Or, "or")
+ TK_MACRO(As, "as")
 #endif
 
 #if TK_INCLUDE & TK_KEYLITERAL

@@ -2,8 +2,9 @@ CUR_DIR=.
 INC_DIR=$(CUR_DIR)/include
 SRC_DIR=$(CUR_DIR)/src
 LIB_DIR=$(CUR_DIR)/lib
+BIN_DIR=$(CUR_DIR)/bin
 LIBRARY=$(LIB_DIR)/librattle.so
-PROGRAM=main
+PROGRAM=rattle
 
 CXX=clang++
 CXXFLAGS=-std=c++20 -fPIC -Wall -I$(INC_DIR)
@@ -31,5 +32,7 @@ $(LIBRARY): $(OBJECTS)
 .PHONY+=clean
 clean:
 	rm -rfv $(TO_CLEAN)
-	@if [ -e $(LIB_DIR) ]; then rmdir --ignore-fail-on-non-empty $(LIB_DIR); fi
+	@if [ -e "$dir" ]; then                        \
+		rmdir --ignore-fail-on-non-empty "$dir";  \
+	fi;                                           \
 
