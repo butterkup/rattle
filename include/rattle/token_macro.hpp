@@ -63,6 +63,8 @@
  TK_MACRO(AnonFn, "")
  TK_MACRO(NotIn, "")
  TK_MACRO(IsNot, "")
+ TK_MACRO(Call, "")
+ TK_MACRO(Subscript, "")
 #endif
 
 #if TK_INCLUDE & TK_PRIMARY

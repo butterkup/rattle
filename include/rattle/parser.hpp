@@ -57,7 +57,6 @@ namespace rattle {
     std::deque<parser::Error> errors;
 
     Parser();
-    Parser(Lexer lexer);
     Parser(Parser const &parser);
     Parser(Parser &&parser);
     Parser &operator=(Parser &&parser);

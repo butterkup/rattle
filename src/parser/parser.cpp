@@ -8,10 +8,14 @@
 namespace rattle {
   std::vector<std::unique_ptr<parser::nodes::Statement>> Parser::parse() {
     std::vector<std::unique_ptr<parser::nodes::Statement>> stmts;
-    while (not state.empty()) {
-      stmts.emplace_back(parser::parse_statement(state));
+    while (true) {
+      if (auto stmt = parser::parse_statement(state); stmt.get()) {
+        stmts.emplace_back(std::move(stmt));
+      } else {
+        break;
+      }
     }
-    stmts.shrink_to_fit();
+    /*stmts.shrink_to_fit();*/
     return stmts;
   }
 
@@ -22,8 +26,6 @@ namespace rattle {
   }
 
   Parser::Parser(): lexer(), stash(), state(lexer, stash, errors), errors() {}
-  Parser::Parser(Lexer lexer)
-    : lexer(std::move(lexer)), stash(), state(lexer, stash, errors), errors() {}
   Parser::Parser(Parser const &parser)
     : lexer(parser.lexer), stash(parser.stash),
       state(lexer, stash, errors, parser.state), errors(parser.errors) {}

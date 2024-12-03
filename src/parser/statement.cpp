@@ -8,6 +8,8 @@ namespace rattle::parser {
   static void expect_eos(State &state) {
     auto token = state.get();
     switch (token.kind) {
+    case lexer::Token::Kind::CloseBrace:
+      state.unget(token);
     case lexer::Token::Kind::Eos:
     case lexer::Token::Kind::Eot:
       break;
@@ -283,22 +285,23 @@ namespace rattle::parser {
     switch (token.kind) {
 #define TK_INCLUDE TK_ASSIGN
 #define TK_MACRO(_Name, _)                                                     \
-  case lexer::Token::Kind::_Name: {                                            \
+  case lexer::Token::Kind::_Name:                                              \
     return std::make_unique<nodes::_Name>(token, std::move(assignable),        \
-                                          expr_stmt(state));                   \
-  }
+                                          expr_stmt(state));
+
 #include <rattle/token_macro.hpp>
     default:
+      state.unget(token);
       expect_eos(state);
       return assignable;
     }
   }
 
   std::unique_ptr<nodes::Statement> parse_statement(State &state) {
-    auto token = state.get();
     using Kind = lexer::Token::Kind;
     // clang-format off
     while (true) {
+      auto token = state.get();
       switch(token.kind) {
         case Kind::Raise:        return raise_stmt(state, token);
         case Kind::Import:       return import_stmt(state, token);
@@ -321,11 +324,11 @@ namespace rattle::parser {
         case Kind::Except:       return except_stmt(state, token);
         case Kind::Lastly:       return lastly_stmt(state, token);
         case Kind::Else:         return else_stmt(state, token);
+        case Kind::Eot:          return nullptr;
         case Kind::CloseParen:   state.report(error_t::dangling_paren, token);
         case Kind::CloseBrace:   state.report(error_t::dangling_brace, token);
         case Kind::CloseBracket: state.report(error_t::dangling_bracket, token);
         case Kind::Eos:
-        case Kind::Eot:
         case Kind::Error:
         case Kind::HashTag:      break;
         default:

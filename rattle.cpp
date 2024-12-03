@@ -1,3 +1,4 @@
+#include "rattle/parser.hpp"
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
@@ -45,7 +46,7 @@ std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
              << ", end=" << p.token.end << ", .proc=" << p.token.proc << ')';
 }
 
-void _lex_file(std::string &&content, std::string const &file) {
+void _lex_file(std::string content, std::string const &file) {
   rattle::Lexer lexer(content);
 #ifdef SHOW_PROC_TK
   std::string const &pstr = lexer.get_content();
@@ -69,6 +70,15 @@ void _lex_file(std::string &&content, std::string const &file) {
   }
 }
 
+void _parse_file(std::string content, std::string const &file) {
+  rattle::Parser parser;
+  parser.reset(content);
+  auto stmts = parser.parse();
+  for (auto &stmt : stmts) {
+    std::cout << "Type: " << PrintableToken(stmt->token, content) << '\n';
+  }
+}
+
 void lex_file(fs::path const &file) {
   if (fs::is_regular_file(file)) {
     std::ifstream reader(file, std::ios::in);
@@ -76,7 +86,9 @@ void lex_file(fs::path const &file) {
       std::size_t size = fs::file_size(file);
       std::string buffer(size, 0);
       reader.read(buffer.data(), size);
-      _lex_file(std::move(buffer), file);
+      /*_lex_file(buffer, file);*/
+      /*std::cout << "---------------------------------------------------\n";*/
+      _parse_file(std::move(buffer), file);
     } else {
       std::cerr << "Failed opening file: \x1b[91m" << file << "\x1b[0m\n";
     }

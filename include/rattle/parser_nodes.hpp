@@ -54,8 +54,8 @@ namespace rattle::parser::nodes {
   struct Statement {
     lexer::Token token;
     Statement(lexer::Token const &token): token(token) {}
-    _stmt;
     virtual ~Statement() = default;
+    _stmt;
   };
 
   struct Expression: Statement {
@@ -257,7 +257,6 @@ namespace rattle::parser::nodes {
     Assignment(lexer::Token const &op, std::unique_ptr<Expression> store,
                std::unique_ptr<Expression> value)
       : Statement(op), store(std::move(store)), value(std::move(value)) {}
-    _stmt;
   };
 
   struct Container: Expression {
@@ -271,9 +270,9 @@ namespace rattle::parser::nodes {
 
 #define INH_ASSIGN(_Name)                                                      \
   struct _Name: Assignment {                                                   \
-    _Name(lexer::Token const &op, std::unique_ptr<Expression> assignable,      \
-          std::unique_ptr<Expression> assignee)                                \
-      : Assignment(op, std::move(assignable), std::move(assignee)) {}          \
+    _Name(lexer::Token const &op, std::unique_ptr<Expression> store,           \
+          std::unique_ptr<Expression> value)                                   \
+      : Assignment(op, std::move(store), std::move(value)) {}                  \
     _stmt;                                                                     \
   }
 
@@ -322,6 +321,9 @@ namespace rattle::parser::nodes {
 #undef INH_ASSIGN
 #undef INH_UNARY_EXPR
 #undef INH_BINARY_EXPR
+#undef _node_visit
+#undef _stmt
+#undef _expr
 
 #pragma GCC diagnostic pop
 } // namespace rattle::parser::nodes

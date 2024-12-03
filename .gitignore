@@ -3,6 +3,7 @@ ignore.*
 __pycache__/
 .vscode/
 *.o
+*.ii
 *.so
 .vscode
 rattle

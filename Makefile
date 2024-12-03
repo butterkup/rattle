@@ -2,7 +2,6 @@ CUR_DIR=.
 INC_DIR=$(CUR_DIR)/include
 SRC_DIR=$(CUR_DIR)/src
 LIB_DIR=$(CUR_DIR)/lib
-BIN_DIR=$(CUR_DIR)/bin
 LIBRARY=$(LIB_DIR)/librattle.so
 PROGRAM=rattle
 
@@ -18,9 +17,14 @@ endif
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)
 OBJECTS=$(subst .cpp,.o,$(SOURCES))
-TO_CLEAN=$(OBJECTS) $(PROGRAM) $(PROGRAM).o $(LIBRARY)
+PREPROCESSED=$(subst .hpp,.ii,$(shell find $(INC_DIR) -name '*.hpp' -type f))
+PREPROCESSED+=$(subst .cpp,.ii,$(SOURCES))
+TO_CLEAN=$(OBJECTS) $(PROGRAM) $(PROGRAM).o $(LIBRARY) $(PREPROCESSED)
 
 all: $(PROGRAM)
+
+.PHONY+=process
+process: $(PREPROCESSED)
 
 $(PROGRAM): $(PROGRAM).o $(LIBRARY)
 	$(CXX) $(CXXFLAGS) $(DEFS) -o $@ $< -L$(LIB_DIR) -Wl,-rpath=$(LIB_DIR) -lrattle
@@ -29,10 +33,20 @@ $(LIBRARY): $(OBJECTS)
 	@mkdir -p $(LIB_DIR)
 	$(CXX) $(CXXFLAGS) -shared -fPIC $(OBJECTS) -o $@
 
+define preprocess_recipe
+	@echo $@
+	@$(CXX) $(CXXFLAGS) -E -o $@ $< 2>/dev/null || :
+endef
+
+%.ii: %.hpp
+	$(preprocess_recipe)
+
+%.ii: %.cpp
+	$(preprocess_recipe)
+
 .PHONY+=clean
 clean:
-	rm -rfv $(TO_CLEAN)
-	@if [ -e "$dir" ]; then                        \
-		rmdir --ignore-fail-on-non-empty "$dir";  \
-	fi;                                           \
+	@echo CleaningUp
+	@rm -rfv $(TO_CLEAN)
+	@if [ -e "$(LIB_DIR)" ]; then rmdir --ignore-fail-on-non-empty "$(LIB_DIR)"; fi;
 
