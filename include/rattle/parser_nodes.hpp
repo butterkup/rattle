@@ -11,51 +11,30 @@ namespace rattle::parser::nodes {
 
   // Forward declarations of the nodes
 #define TK_MACRO(Name, _) struct Name;
-#define TK_INCLUDE                                                             \
-  (TK_OPALL | TK_KEYUNARY | TK_KEYLITERAL | TK_KEYBINARY | TK_KEYOTHER |       \
-   TK_ASSIGN | TK_PRINUMBER | TK_PRIMARY)
+#define TK_INCLUDE TK_ALL_NODES
 #include <rattle/token_macro.hpp>
-  struct BinaryExpr;
-  struct UnaryExpr;
-  struct Statement;
 
   // Visitor ABC
 #define CREATE_VISIT(Type) virtual void visit(Type &) = 0
 
-  struct ExpressionVisitor {
+  struct Visitor {
 #define TK_MACRO(Name, _) CREATE_VISIT(Name);
-#define TK_INCLUDE                                                             \
-  (TK_OPALL | TK_PRINUMBER | TK_PRIMARY | TK_KEYBINARY | TK_KEYUNARY |         \
-   TK_KEYLITERAL)
+#define TK_INCLUDE TK_ALL_NODES
 #include "token_macro.hpp"
-
-    // To communicate expression errors
-    CREATE_VISIT(BinaryExpr);
-    CREATE_VISIT(UnaryExpr);
-  };
-
-  struct StatementVisitor: ExpressionVisitor {
-#define TK_MACRO(Name, _) CREATE_VISIT(Name);
-#define TK_INCLUDE (TK_KEYOTHER | TK_ASSIGN)
-#include "token_macro.hpp"
-
-    // To communicate statement errors
-    CREATE_VISIT(Statement);
   };
 
 #undef CREATE_VISIT
 
-  //
-#define _node_visit(Visitor)                                                   \
-  virtual void visit(Visitor &visitor) { visitor.visit(*this); }
-#define _stmt _node_visit(StatementVisitor)
-#define _expr _node_visit(ExpressionVisitor)
+  // Node implementations
+#define _node_visit(qualifier)                                                 \
+  virtual void visit(Visitor &visitor) qualifier { visitor.visit(*this); }
+#define _visit _node_visit(override)
 
   struct Statement {
     lexer::Token token;
     Statement(lexer::Token const &token): token(token) {}
     virtual ~Statement() = default;
-    _stmt;
+    _node_visit();
   };
 
   struct Expression: Statement {
@@ -68,7 +47,7 @@ namespace rattle::parser::nodes {
                std::unique_ptr<Expression> right)
       : Expression(operator_), left_operand(std::move(left)),
         right_operand(std::move(right)) {}
-    _expr;
+    _visit;
   };
 
   struct UnaryExpr: Expression {
@@ -76,7 +55,7 @@ namespace rattle::parser::nodes {
     UnaryExpr(lexer::Token const &operator_,
               std::unique_ptr<Expression> operand)
       : Expression(operator_), operand(std::move(operand)) {}
-    _expr;
+    _visit;
   };
 
   struct Block: Statement {
@@ -84,31 +63,31 @@ namespace rattle::parser::nodes {
     Block(lexer::Token const &brace,
           std::vector<std::unique_ptr<Statement>> statements)
       : Statement(brace), statements(std::move(statements)) {}
-    _stmt;
+    _visit;
   };
 
   struct Break: Statement {
     Break(lexer::Token const &kwd): Statement(kwd) {}
-    _stmt;
+    _visit;
   };
 
   struct Continue: Statement {
     Continue(lexer::Token const &kwd): Statement(kwd) {}
-    _stmt;
+    _visit;
   };
 
   struct Else: Statement {
     std::unique_ptr<Block> body;
     Else(lexer::Token const &kwd, std::unique_ptr<Block> body)
       : Statement(kwd), body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct Lastly: Statement {
     std::unique_ptr<Block> body;
     Lastly(lexer::Token const &kwd, std::unique_ptr<Block> body)
       : Statement(kwd), body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct Except: Statement {
@@ -117,7 +96,7 @@ namespace rattle::parser::nodes {
     Except(lexer::Token const &kwd, std::unique_ptr<Expression> captured,
            std::unique_ptr<Block> body)
       : Statement(kwd), captured(std::move(captured)), body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct Try: Statement {
@@ -130,14 +109,14 @@ namespace rattle::parser::nodes {
       : Statement(kwd), handlers(std::move(handlers)),
         block_else(std::move(block_else)),
         block_lastly(std::move(block_lastly)) {}
-    _stmt;
+    _visit;
   };
 
   struct Raise: Statement {
     std::unique_ptr<Expression> value;
     Raise(lexer::Token const &kwd, std::unique_ptr<Expression> value)
       : Statement(kwd), value(std::move(value)) {}
-    _stmt;
+    _visit;
   };
 
   struct Class: Statement {
@@ -148,7 +127,7 @@ namespace rattle::parser::nodes {
           std::unique_ptr<Expression> bases, std::unique_ptr<Block> body)
       : Statement(kwd), name(name), bases(std::move(bases)),
         body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct Fn: Statement {
@@ -159,14 +138,14 @@ namespace rattle::parser::nodes {
        std::unique_ptr<Expression> params, std::unique_ptr<Block> body)
       : Statement(kwd), name(name), params(std::move(params)),
         body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct Import: Statement {
     std::unique_ptr<Expression> module;
     Import(lexer::Token const &kwd, std::unique_ptr<Expression> module)
       : Statement(kwd), module(std::move(module)) {}
-    _stmt;
+    _visit;
   };
 
   struct From: Statement {
@@ -176,7 +155,7 @@ namespace rattle::parser::nodes {
          std::unique_ptr<Import> module)
       : Statement(kwd), package(std::move(package)), module(std::move(module)) {
     }
-    _stmt;
+    _visit;
   };
 
   struct If: Statement {
@@ -187,7 +166,7 @@ namespace rattle::parser::nodes {
        std::unique_ptr<Block> block_if, std::unique_ptr<Else> block_else)
       : Statement(kwd), condition(std::move(cond)),
         block_if(std::move(block_if)), block_else(std::move(block_else)) {}
-    _stmt;
+    _visit;
   };
 
   struct While: Statement {
@@ -196,7 +175,7 @@ namespace rattle::parser::nodes {
     While(lexer::Token const &kwd, std::unique_ptr<Expression> cond,
           std::unique_ptr<Block> body)
       : Statement(kwd), condition(std::move(cond)), body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct For: Statement {
@@ -205,14 +184,14 @@ namespace rattle::parser::nodes {
     For(lexer::Token const &kwd, std::unique_ptr<Expression> bindings,
         std::unique_ptr<Block> body)
       : Statement(kwd), bindings(std::move(bindings)), body(std::move(body)) {}
-    _stmt;
+    _visit;
   };
 
   struct Return: Statement {
     std::unique_ptr<Expression> value;
     Return(lexer::Token const &kwd, std::unique_ptr<Expression> value)
       : Statement(kwd), value(std::move(value)) {}
-    _stmt;
+    _visit;
   };
 
   struct With: Statement {
@@ -221,35 +200,35 @@ namespace rattle::parser::nodes {
     With(lexer::Token const &kwd, std::unique_ptr<Expression> ctx,
          std::unique_ptr<Block> block)
       : Statement(kwd), contexts(std::move(ctx)), block(std::move(block)) {}
-    _stmt;
+    _visit;
   };
 
   struct Assert: Statement {
     std::unique_ptr<Expression> condition;
     Assert(lexer::Token const &kwd, std::unique_ptr<Expression> cond)
       : Statement(kwd), condition(std::move(cond)) {}
-    _stmt;
+    _visit;
   };
 
   struct NonLocal: Statement {
     std::unique_ptr<Expression> identifiers;
     NonLocal(lexer::Token const &kwd, std::unique_ptr<Expression> ids)
       : Statement(kwd), identifiers(std::move(ids)) {}
-    _stmt;
+    _visit;
   };
 
   struct Global: Statement {
     std::unique_ptr<Expression> identifiers;
     Global(lexer::Token const &kwd, std::unique_ptr<Expression> ids)
       : Statement(kwd), identifiers(std::move(ids)) {}
-    _stmt;
+    _visit;
   };
 
   struct Del: Statement {
     std::unique_ptr<Expression> identifiers;
     Del(lexer::Token const &kwd, std::unique_ptr<Expression> ids)
       : Statement(kwd), identifiers(std::move(ids)) {}
-    _stmt;
+    _visit;
   };
 
   struct Assignment: Statement {
@@ -265,7 +244,7 @@ namespace rattle::parser::nodes {
     Container(lexer::Token const &op, Type type,
               std::unique_ptr<Expression> entries)
       : Expression(op), type(type), entries(std::move(entries)) {}
-    _stmt;
+    _visit;
   };
 
 #define INH_ASSIGN(_Name)                                                      \
@@ -273,57 +252,56 @@ namespace rattle::parser::nodes {
     _Name(lexer::Token const &op, std::unique_ptr<Expression> store,           \
           std::unique_ptr<Expression> value)                                   \
       : Assignment(op, std::move(store), std::move(value)) {}                  \
-    _stmt;                                                                     \
+    _visit;                                                                    \
   }
 
-#define INH_BINARY_EXPR(_Name)                                                 \
+#define INH_BINARY_visit(_Name)                                                \
   struct _Name: BinaryExpr {                                                   \
     _Name(lexer::Token const &op, std::unique_ptr<Expression> left,            \
           std::unique_ptr<Expression> right)                                   \
       : BinaryExpr(op, std::move(left), std::move(right)) {}                   \
-    _expr;                                                                     \
+    _visit;                                                                    \
   }
 
-#define INH_UNARY_EXPR(_Name)                                                  \
+#define INH_UNARY_visit(_Name)                                                 \
   struct _Name: UnaryExpr {                                                    \
     _Name(lexer::Token const &op, std::unique_ptr<Expression> operand)         \
       : UnaryExpr(op, std::move(operand)) {}                                   \
-    _expr;                                                                     \
+    _visit;                                                                    \
   }
 
-#define INH_LITERAL_EXPR(_Name)                                                \
+#define INH_LITERAL_visit(_Name)                                               \
   struct _Name: Expression {                                                   \
     _Name(lexer::Token const &op): Expression(op) {}                           \
-    _expr;                                                                     \
+    _visit;                                                                    \
   }
 
 #define TK_MACRO(Name, _) INH_ASSIGN(Name);
 #define TK_INCLUDE TK_ASSIGN
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_LITERAL_EXPR(Name);
+#define TK_MACRO(Name, _) INH_LITERAL_visit(Name);
 #define TK_INCLUDE (TK_PRINUMBER | TK_PRIMARY | TK_KEYLITERAL)
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_BINARY_EXPR(Name);
+#define TK_MACRO(Name, _) INH_BINARY_visit(Name);
 #define TK_INCLUDE TK_PRIBINARY
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_BINARY_EXPR(Name);
+#define TK_MACRO(Name, _) INH_BINARY_visit(Name);
 #define TK_INCLUDE (TK_KEYBINARY | TK_OPALL)
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_UNARY_EXPR(Name);
+#define TK_MACRO(Name, _) INH_UNARY_visit(Name);
 #define TK_INCLUDE TK_KEYUNARY
 #include "token_macro.hpp"
 
-#undef INH_LITERAL_EXPR
+#undef INH_LITERAL_visit
 #undef INH_ASSIGN
-#undef INH_UNARY_EXPR
-#undef INH_BINARY_EXPR
+#undef INH_UNARY_visit
+#undef INH_BINARY_visit
 #undef _node_visit
-#undef _stmt
-#undef _expr
+#undef _visit
 
 #pragma GCC diagnostic pop
 } // namespace rattle::parser::nodes

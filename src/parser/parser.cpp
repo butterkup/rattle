@@ -25,6 +25,16 @@ namespace rattle {
     return tmp;
   }
 
+  const char *to_string(parser::error_t error) {
+    switch (error) {
+#define ERROR_MACRO(_error)                                                    \
+  case parser::error_t::_error:                                                \
+    return #_error;
+#define ERROR_INCLUDE PARSER_ERROR
+#include <rattle/error_macro.hpp>
+    }
+  }
+
   Parser::Parser(): lexer(), stash(), state(lexer, stash, errors), errors() {}
   Parser::Parser(Parser const &parser)
     : lexer(parser.lexer), stash(parser.stash),

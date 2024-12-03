@@ -58,6 +58,17 @@
  TK_MACRO(None, "None")
 #endif
 
+#if TK_INCLUDE & TK_BASE_NODES
+  TK_MACRO(BinaryExpr, "")
+  TK_MACRO(UnaryExpr, "")
+  TK_MACRO(Statement, "")
+#endif
+
+#if TK_INCLUDE & TK_EXTR_NODES
+  TK_MACRO(Block, "")
+  TK_MACRO(Error, "")
+#endif
+
 #if TK_INCLUDE & TK_PRIBINARY
  TK_MACRO(Separator, "")
  TK_MACRO(AnonFn, "")
@@ -65,6 +76,10 @@
  TK_MACRO(IsNot, "")
  TK_MACRO(Call, "")
  TK_MACRO(Subscript, "")
+#endif
+
+#if TK_INCLUDE & TK_PRIUNARY
+  TK_MACRO(Container, "")
 #endif
 
 #if TK_INCLUDE & TK_PRIMARY

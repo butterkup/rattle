@@ -53,6 +53,8 @@ namespace rattle::parser {
       case Kind::Slash:        return {prec::none,       nullptr,        prec::divide,     parse_binary};
       case Kind::Percent:      return {prec::none,       nullptr,        prec::modulus,    parse_binary};
       case Kind::BitAnd:       return {prec::none,       nullptr,        prec::bit_and,    parse_binary};
+      case Kind::And:          return {prec::none,       nullptr,        prec::logic_or,   parse_binary};
+      case Kind::Or:           return {prec::none,       nullptr,        prec::logic_and,  parse_binary};
       case Kind::BitOr:        return {prec::none,       nullptr,        prec::bit_or,     parse_binary};
       case Kind::Invert:       return {prec::invert,     parse_unary,    prec::none,       nullptr     };
       case Kind::At:           return {prec::none,       nullptr,        prec::matmul,     parse_binary};
@@ -170,10 +172,12 @@ namespace rattle::parser {
   case lexer::Token::Kind::_Name:                                              \
     return std::make_unique<nodes::_Name>(token, std::move(left), parse_right);
       TK_MACRO(As, _)
+      TK_MACRO(And, _)
+      TK_MACRO(Or, _)
 #define TK_INCLUDE TK_OPALL
 #include <rattle/token_macro.hpp>
     case lexer::Token::Kind::OpenBracket: {
-      auto arguments = parse_right;
+      auto arguments = _parse_expression<true>(state, prec::_lowest);
       auto rbracket = state.get(true);
       if (rbracket.kind != lexer::Token::Kind::CloseBracket) {
         state.report(error_t::unterminated_bracket, token);
@@ -183,7 +187,7 @@ namespace rattle::parser {
                                                 std::move(arguments));
     }
     case lexer::Token::Kind::OpenParen: {
-      auto arguments = parse_right;
+      auto arguments = _parse_expression<true>(state, prec::_lowest);
       auto rparen = state.get(true);
       if (rparen.kind != lexer::Token::Kind::CloseParen) {
         state.report(error_t::unterminated_paren, token);
@@ -239,17 +243,20 @@ namespace rattle::parser {
 
   _decl_unary(parse_paren) {
     return parse_container<lexer::Token::Kind::CloseParen,
-                           error_t::unterminated_paren>(state, prec, token);
+                           error_t::unterminated_paren>(state, prec::_lowest,
+                                                        token);
   }
 
   _decl_unary(parse_bracket) {
     return parse_container<lexer::Token::Kind::CloseBracket,
-                           error_t::unterminated_bracket>(state, prec, token);
+                           error_t::unterminated_bracket>(state, prec::_lowest,
+                                                          token);
   }
 
   _decl_unary(parse_brace) {
     return parse_container<lexer::Token::Kind::CloseBrace,
-                           error_t::unterminated_brace>(state, prec, token);
+                           error_t::unterminated_brace>(state, prec::_lowest,
+                                                        token);
   }
 
   _decl_unary(parse_anonfn) {

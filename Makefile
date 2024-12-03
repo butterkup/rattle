@@ -1,4 +1,5 @@
 CUR_DIR=.
+PREXT=ii
 INC_DIR=$(CUR_DIR)/include
 SRC_DIR=$(CUR_DIR)/src
 LIB_DIR=$(CUR_DIR)/lib
@@ -17,8 +18,8 @@ endif
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)
 OBJECTS=$(subst .cpp,.o,$(SOURCES))
-PREPROCESSED=$(subst .hpp,.ii,$(shell find $(INC_DIR) -name '*.hpp' -type f))
-PREPROCESSED+=$(subst .cpp,.ii,$(SOURCES))
+PREPROCESSED=$(subst .hpp,.$(PREXT),$(shell find $(INC_DIR) -name '*.hpp' -type f))
+PREPROCESSED+=$(subst .cpp,.$(PREXT),$(SOURCES))
 TO_CLEAN=$(OBJECTS) $(PROGRAM) $(PROGRAM).o $(LIBRARY) $(PREPROCESSED)
 
 all: $(PROGRAM)
@@ -38,10 +39,10 @@ define preprocess_recipe
 	@$(CXX) $(CXXFLAGS) -E -o $@ $< 2>/dev/null || :
 endef
 
-%.ii: %.hpp
+%.$(PREXT): %.hpp
 	$(preprocess_recipe)
 
-%.ii: %.cpp
+%.$(PREXT): %.cpp
 	$(preprocess_recipe)
 
 .PHONY+=clean

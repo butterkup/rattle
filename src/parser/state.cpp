@@ -4,22 +4,36 @@
 
 namespace rattle::parser {
   lexer::Token State::get(bool ignore_eos, bool ignore_comments) {
-    if (stash.empty()) {
-      while (true) {
-        auto token = lexer.scan();
-        hit_eot = token.kind == lexer::Token::Kind::Eot;
-        if (ignore_comments and token.kind == lexer::Token::Kind::HashTag) {
-          continue;
-        }
-        if (ignore_eos and token.kind == lexer::Token::Kind::Eos) {
-          continue;
-        }
-        return token;
+    auto const ignore = [ & ](lexer::Token const &t) {
+      return (ignore_eos and t.kind == lexer::Token::Kind::Eos) or
+             (ignore_comments and t.kind == lexer::Token::Kind::HashTag);
+    };
+    while (stash.size()) {
+      auto token = stash.front();
+      stash.pop_front();
+      if (ignore(token)) {
+        continue;
       }
+      return token;
     }
-    auto token = stash.back();
-    stash.pop_back();
-    return token;
+    while (true) {
+      auto token = lexer.scan();
+      hit_eot = token.kind == lexer::Token::Kind::Eot;
+      if (ignore(token)) {
+        continue;
+      }
+      return token;
+    }
+  }
+
+  const char *to_string(error_t error) {
+    switch (error) {
+#define ERROR_MACRO(_error)                                                    \
+  case error_t::_error:                                                        \
+    return #_error;
+#define ERROR_INCLUDE PARSER_ERROR
+#include <rattle/error_macro.hpp>
+    }
   }
 
   void State::report(error_t error, lexer::Location const &start,

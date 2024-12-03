@@ -15,6 +15,8 @@ namespace rattle {
 #include "error_macro.hpp"
     };
 
+    const char *to_string(error_t error);
+
     struct Error {
       error_t type;
       lexer::Location start, end;

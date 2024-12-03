@@ -1,10 +1,11 @@
-#include "rattle/parser.hpp"
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <rattle/analyzer.hpp>
 #include <rattle/lexer.hpp>
+#include <rattle/parser.hpp>
 #include <span>
 
 namespace fs = std::filesystem;
@@ -74,8 +75,19 @@ void _parse_file(std::string content, std::string const &file) {
   rattle::Parser parser;
   parser.reset(content);
   auto stmts = parser.parse();
+  rattle::analyzer::NodeType node_type;
   for (auto &stmt : stmts) {
-    std::cout << "Type: " << PrintableToken(stmt->token, content) << '\n';
+    /*std::cout << "Type: " << PrintableToken(stmt->token, content) << '\n';*/
+    stmt->visit(node_type);
+    std::cout << "Type: "
+              << rattle::analyzer::to_string(node_type.get_type(*stmt)) << '\n';
+  }
+  while (parser.errors.size()) {
+    rattle::parser::Error &error = parser.errors.front();
+    std::cout << "Error(\x1b[91m" << rattle::parser::to_string(error.type)
+              << "\x1b[0m, start=" << error.start << ", end=" << error.end
+              << ")\n";
+    parser.errors.pop_front();
   }
 }
 

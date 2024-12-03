@@ -262,11 +262,10 @@ namespace rattle::parser {
       name = fn;
     }
     auto paren = state.get(true);
+    state.unget(paren);
     std::unique_ptr<nodes::Expression> params;
     if (paren.kind == lexer::Token::Kind::OpenParen) {
-      params = (state.unget(paren), parse_expression(state));
-    } else {
-      state.unget(paren);
+      params = parse_expression(state);
     }
     auto brace = state.get(true);
     std::unique_ptr<nodes::Block> body;
@@ -303,34 +302,34 @@ namespace rattle::parser {
     while (true) {
       auto token = state.get();
       switch(token.kind) {
-        case Kind::Raise:        return raise_stmt(state, token);
-        case Kind::Import:       return import_stmt(state, token);
+        case Kind::Eos:          break;
+        case Kind::Error:        break;
+        case Kind::HashTag:      break;
+        case Kind::Eot:          return nullptr;
+        case Kind::If:           return if_stmt(state, token);
         case Kind::Fn:           return fn_stmt(state, token);
         case Kind::Del:          return del_stmt(state, token);
-        case Kind::NonLocal:     return nonlocal_stmt(state, token);
-        case Kind::Global:       return global_stmt(state, token);
-        case Kind::Continue:     return continue_stmt(state, token);
-        case Kind::Break:        return break_stmt(state, token);
-        case Kind::From:         return from_stmt(state, token);
-        case Kind::If:           return if_stmt(state, token);
+        case Kind::Try:          return try_stmt(state, token);
         case Kind::For:          return for_stmt(state, token);
+        case Kind::With:         return with_stmt(state, token);
+        case Kind::Else:         return else_stmt(state, token);
+        case Kind::From:         return from_stmt(state, token);
         case Kind::While:        return while_stmt(state, token);
         case Kind::OpenBrace:    return block_stmt(state, token);
         case Kind::Class:        return class_stmt(state, token);
-        case Kind::Try:          return try_stmt(state, token);
-        case Kind::With:         return with_stmt(state, token);
+        case Kind::Break:        return break_stmt(state, token);
+        case Kind::Raise:        return raise_stmt(state, token);
+        case Kind::Global:       return global_stmt(state, token);
+        case Kind::Import:       return import_stmt(state, token);
         case Kind::Assert:       return assert_stmt(state, token);
         case Kind::Return:       return return_stmt(state, token);
         case Kind::Except:       return except_stmt(state, token);
         case Kind::Lastly:       return lastly_stmt(state, token);
-        case Kind::Else:         return else_stmt(state, token);
-        case Kind::Eot:          return nullptr;
-        case Kind::CloseParen:   state.report(error_t::dangling_paren, token);
-        case Kind::CloseBrace:   state.report(error_t::dangling_brace, token);
-        case Kind::CloseBracket: state.report(error_t::dangling_bracket, token);
-        case Kind::Eos:
-        case Kind::Error:
-        case Kind::HashTag:      break;
+        case Kind::NonLocal:     return nonlocal_stmt(state, token);
+        case Kind::Continue:     return continue_stmt(state, token);
+        case Kind::CloseParen:   state.report(error_t::dangling_paren, token); break;
+        case Kind::CloseBrace:   state.report(error_t::dangling_brace, token); break;
+        case Kind::CloseBracket: state.report(error_t::dangling_bracket, token); break;
         default:
           state.unget(token);
           auto expr = assign_stmt(state);
