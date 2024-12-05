@@ -13,7 +13,8 @@
 #if TK_INCLUDE & TK_SPECIAL
  TK_MACRO(Error, "ErrorToken")   // Invalid characters and constructs
  TK_MACRO(Eot, "EndOfToken")     // Marks end of token stream
- TK_MACRO(Eos, "EndOfStatement") // Can be newline and semicolon
+ TK_MACRO(Newline, "Newline")    // Marks EndOfStatement
+ TK_MACRO(Semicolon, "Newline")  // Marks EndOfStatement
 #endif
 
 #if TK_INCLUDE & TK_KEYOTHER
@@ -62,11 +63,11 @@
   TK_MACRO(BinaryExpr, "")
   TK_MACRO(UnaryExpr, "")
   TK_MACRO(Statement, "")
+  TK_MACRO(ExprStatement, "")
 #endif
 
 #if TK_INCLUDE & TK_EXTR_NODES
   TK_MACRO(Block, "")
-  TK_MACRO(Error, "")
 #endif
 
 #if TK_INCLUDE & TK_PRIBINARY

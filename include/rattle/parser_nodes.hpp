@@ -3,6 +3,7 @@
 #include "category.hpp"
 #include "lexer.hpp"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace rattle::parser::nodes {
@@ -55,6 +56,13 @@ namespace rattle::parser::nodes {
     UnaryExpr(lexer::Token const &operator_,
               std::unique_ptr<Expression> operand)
       : Expression(operator_), operand(std::move(operand)) {}
+    _visit;
+  };
+
+  struct ExprStatement: Statement {
+    std::unique_ptr<Expression> expr;
+    ExprStatement(lexer::Token const &eos, std::unique_ptr<Expression> expr)
+      : Statement(eos), expr(std::move(expr)) {}
     _visit;
   };
 
@@ -120,10 +128,10 @@ namespace rattle::parser::nodes {
   };
 
   struct Class: Statement {
-    lexer::Token name;
+    std::optional<lexer::Token> name;
     std::unique_ptr<Expression> bases;
     std::unique_ptr<Block> body;
-    Class(lexer::Token const &kwd, lexer::Token const &name,
+    Class(lexer::Token const &kwd, std::optional<lexer::Token> const &name,
           std::unique_ptr<Expression> bases, std::unique_ptr<Block> body)
       : Statement(kwd), name(name), bases(std::move(bases)),
         body(std::move(body)) {}
@@ -131,10 +139,10 @@ namespace rattle::parser::nodes {
   };
 
   struct Fn: Statement {
-    lexer::Token name;
+    std::optional<lexer::Token> name;
     std::unique_ptr<Expression> params;
     std::unique_ptr<Block> body;
-    Fn(lexer::Token const &kwd, lexer::Token const &name,
+    Fn(lexer::Token const &kwd, std::optional<lexer::Token> const &name,
        std::unique_ptr<Expression> params, std::unique_ptr<Block> body)
       : Statement(kwd), name(name), params(std::move(params)),
         body(std::move(body)) {}

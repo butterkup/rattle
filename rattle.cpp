@@ -31,11 +31,11 @@ template <bool procloc>
 std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
   std::string_view content;
   switch (p.token.kind) {
-  case rattle::lexer::Token::Kind::Eos:
-    content = "(Eos)";
+  case rattle::lexer::Token::Kind::Newline:
+    content = ";";
     break;
   case rattle::lexer::Token::Kind::Eot:
-    content = "(Eot)";
+    content = "";
     break;
   default:
     content = rattle::lexer::token_content(

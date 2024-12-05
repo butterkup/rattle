@@ -3,6 +3,7 @@
 #include "category.hpp"
 #include "lexer.hpp"
 #include "parser_nodes.hpp"
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <vector>
@@ -40,21 +41,28 @@ namespace rattle {
       std::deque<Error> &errors;
       std::deque<int> settings;
       bool hit_eot;
-      int context;
+      std::uint8_t context;
       __detail::Scopes scopes;
 
-      void push(char setting = DEFAULT);
+      void push(std::uint8_t setting = DEFAULT);
       void pop();
 
     public:
       friend struct __detail::ContextSetting;
       friend struct __detail::Scope;
-      enum : char {
+      enum : std::uint8_t {
+        // Bit state settings.
         NONE = 0,
-        IGNORE_EOS = 1,
         IGNORE_COMMENTS = 2,
+        IGNORE_NEWLINE = 4,
+        IGNORE_SEMICOLON = 8,
+
+        // Shorter constants, most used.
         DEFAULT = IGNORE_COMMENTS,
-        IGNORE_EOSCOM = IGNORE_COMMENTS | IGNORE_EOS
+        IGNORE_EOS = IGNORE_NEWLINE | IGNORE_SEMICOLON,
+        IGNORE_NLCOM = IGNORE_NEWLINE | IGNORE_COMMENTS,
+        IGNORE_SEMCOM = IGNORE_SEMICOLON | IGNORE_COMMENTS,
+        IGNORE_EOSCOM = IGNORE_EOS | IGNORE_COMMENTS,
       };
       State(State &&) = delete;
       State(State const &) = delete;
@@ -68,13 +76,13 @@ namespace rattle {
           hit_eot(state.hit_eot), context(state.context), scopes(state.scopes) {
       }
 
-      bool test(char setting) const;
+      bool test(std::uint8_t setting) const;
       bool in_paren() const;
       bool in_bracket() const;
       bool in_brace() const;
-      char setting() const;
+      std::uint8_t setting() const;
       bool empty() const;
-      __detail::ContextSetting with(char setting = DEFAULT);
+      __detail::ContextSetting with(std::uint8_t setting = DEFAULT);
       __detail::Scope enter_paren();
       __detail::Scope enter_bracket();
       __detail::Scope enter_brace();
@@ -103,7 +111,7 @@ namespace rattle {
         ContextSetting(ContextSetting &&) = delete;
         ContextSetting(ContextSetting const &) = delete;
         ContextSetting(State &managed): managed(managed) {}
-        ContextSetting(State &managed, char setting): managed(managed) {
+        ContextSetting(State &managed, std::uint8_t setting): managed(managed) {
           managed.push(setting);
         }
         ~ContextSetting() { managed.pop(); }

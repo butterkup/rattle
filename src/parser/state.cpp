@@ -4,8 +4,8 @@
 
 namespace rattle::parser {
   void State::unget(lexer::Token const &token) { stash.push_back(token); }
-  bool State::test(char setting) const { return context & setting; }
-  char State::setting() const { return context; }
+  bool State::test(std::uint8_t setting) const { return context & setting; }
+  std::uint8_t State::setting() const { return context; }
   bool State::empty() const { return hit_eot; }
   bool State::in_paren() const { return scopes.paren; }
   bool State::in_bracket() const { return scopes.bracket; }
@@ -14,11 +14,11 @@ namespace rattle::parser {
   __detail::Scope State::enter_bracket() { return scopes.bracket; }
   __detail::Scope State::enter_brace() { return scopes.brace; }
 
-  __detail::ContextSetting State::with(char setting) {
+  __detail::ContextSetting State::with(std::uint8_t setting) {
     return {*this, setting};
   }
 
-  void State::push(char setting) {
+  void State::push(std::uint8_t setting) {
     settings.push_back(context);
     context = setting;
   }
@@ -29,10 +29,13 @@ namespace rattle::parser {
   }
 
   lexer::Token State::get() {
+    // clang-format off
     auto const ignore = [ & ](lexer::Token const &t) {
-      return (test(IGNORE_EOS) and t.kind == lexer::Token::Kind::Eos) or
+      return (test(IGNORE_NEWLINE) and t.kind == lexer::Token::Kind::Newline) or
+             (test(IGNORE_SEMICOLON) and t.kind == lexer::Token::Kind::Semicolon) or
              (test(IGNORE_COMMENTS) and t.kind == lexer::Token::Kind::HashTag);
     };
+    // clang-format on
     while (stash.size()) {
       auto token = stash.front();
       stash.pop_front();

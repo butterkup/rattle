@@ -57,8 +57,8 @@ namespace rattle::parser {
       case Kind::And:          return {prec::none,       nullptr,        prec::logic_or,   parse_binary};
       case Kind::Or:           return {prec::none,       nullptr,        prec::logic_and,  parse_binary};
       case Kind::BitOr:        return {prec::none,       nullptr,        prec::bit_or,     parse_binary};
-      case Kind::Invert:       return {prec::invert,     parse_unary,    prec::none,       nullptr     };
       case Kind::At:           return {prec::none,       nullptr,        prec::matmul,     parse_binary};
+      case Kind::Invert:       return {prec::invert,     parse_unary,    prec::none,       nullptr     };
 
       case Kind::Is:           return {prec::none,       nullptr,        prec::is,         parse_multik};
       case Kind::In:           return {prec::none,       nullptr,        prec::in,         parse_binary};
@@ -118,7 +118,7 @@ namespace rattle::parser {
   }
 
   UniqueExpr parse_expression(State &state) {
-    auto ctx = state.with(State::IGNORE_COMMENTS);
+    auto ctx = state.with();
     return _parse_expression(state, prec::_lowest);
   }
 
@@ -175,8 +175,8 @@ namespace rattle::parser {
 #define TK_INCLUDE (TK_OPALL | TK_KEYBINARY)
 #include <rattle/token_macro.hpp>
     case lexer::Token::Kind::OpenBracket: {
-      auto scope = state.enter_brace();
-      auto ctx = state.with(State::IGNORE_EOSCOM);
+      auto scope = state.enter_bracket();
+      auto ctx = state.with(State::IGNORE_NLCOM);
       auto arguments = _parse_expression(state, prec::_lowest);
       auto rbracket = state.get();
       if (rbracket.kind != lexer::Token::Kind::CloseBracket) {
@@ -188,7 +188,7 @@ namespace rattle::parser {
     }
     case lexer::Token::Kind::OpenParen: {
       auto scope = state.enter_paren();
-      auto ctx = state.with(State::IGNORE_EOSCOM);
+      auto ctx = state.with(State::IGNORE_NLCOM);
       auto arguments = _parse_expression(state, prec::_lowest);
       auto rparen = state.get();
       if (rparen.kind != lexer::Token::Kind::CloseParen) {
@@ -239,7 +239,7 @@ namespace rattle::parser {
 
   template <lexer::Token::Kind close, error_t unclosed>
   _decl_unary(parse_container) {
-    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto ctx = state.with(State::IGNORE_NLCOM);
     auto operand = parse_right;
     auto token_ = state.get();
     if (token_.kind != close) {
