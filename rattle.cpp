@@ -82,6 +82,7 @@ void _parse_file(std::string content, std::string const &file) {
     std::cout << "Type: "
               << rattle::analyzer::to_string(node_type.get_type(*stmt)) << '\n';
   }
+  std::cout << "Parser emitted " << parser.errors.size() << " errors\n";
   while (parser.errors.size()) {
     rattle::parser::Error &error = parser.errors.front();
     std::cout << "Error(\x1b[91m" << rattle::parser::to_string(error.type)
@@ -100,7 +101,9 @@ void lex_file(fs::path const &file) {
       reader.read(buffer.data(), size);
       /*_lex_file(buffer, file);*/
       /*std::cout << "---------------------------------------------------\n";*/
+      std::cout << "FILE: " << file << '\n';
       _parse_file(std::move(buffer), file);
+      std::cout << "--------------------------------------------------\n";
     } else {
       std::cerr << "Failed opening file: \x1b[91m" << file << "\x1b[0m\n";
     }

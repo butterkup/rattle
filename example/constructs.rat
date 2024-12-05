@@ -23,9 +23,9 @@ number = 34
 
 if number % 4 == 0 {
   print("Divisible by 4")
-} elif number == 30 {
+} else if number == 30 {
   print("Is thirty")
-} elif not number {
+} else if not number {
   print("Special zero")
 } else {
   print("Must be lucky today!")

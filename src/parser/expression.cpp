@@ -25,6 +25,7 @@ namespace rattle::parser {
   _decl_unary(parse_anonfn);
   _decl_unary(parse_unary);
   _decl_binary(parse_binary);
+  _decl_binary(parse_multik);
 
   struct PrecParser {
     prec unary_prec;
@@ -59,9 +60,9 @@ namespace rattle::parser {
       case Kind::Invert:       return {prec::invert,     parse_unary,    prec::none,       nullptr     };
       case Kind::At:           return {prec::none,       nullptr,        prec::matmul,     parse_binary};
 
-      case Kind::Is:           return {prec::none,       nullptr,        prec::is,         parse_binary};
+      case Kind::Is:           return {prec::none,       nullptr,        prec::is,         parse_multik};
       case Kind::In:           return {prec::none,       nullptr,        prec::in,         parse_binary};
-      case Kind::Not:          return {prec::logic_not,  parse_unary,    prec::none,       nullptr     };
+      case Kind::Not:          return {prec::logic_not,  parse_unary,    prec::in,         parse_multik};
 
       case Kind::Fn:           return {prec::primary,    parse_anonfn,   prec::none,       nullptr     };
       case Kind::Yield:        return {prec::yield,      parse_unary,    prec::none,       nullptr     };
@@ -90,10 +91,9 @@ namespace rattle::parser {
   }
   // clang-format on
 
-  template <bool ignore_eos>
   static UniqueExpr _parse_expression(State &state, prec threshold) {
     UniqueExpr expression;
-    auto token = state.get(ignore_eos);
+    auto token = state.get();
     auto parser = get_token_prec(token.kind);
     if (parser.unary_prec >= threshold) {
       assert(parser.unary_parser);
@@ -118,7 +118,8 @@ namespace rattle::parser {
   }
 
   UniqueExpr parse_expression(State &state) {
-    return _parse_expression<false>(state, prec::_lowest);
+    auto ctx = state.with(State::IGNORE_COMMENTS);
+    return _parse_expression(state, prec::_lowest);
   }
 
   _decl_unary(parse_primary) {
@@ -144,7 +145,7 @@ namespace rattle::parser {
     }
   }
 
-#define parse_right _parse_expression<true>(state, prec)
+#define parse_right _parse_expression(state, prec)
 
   _decl_unary(parse_unary) {
     switch (token.kind) {
@@ -171,14 +172,13 @@ namespace rattle::parser {
 #define TK_MACRO(_Name, _)                                                     \
   case lexer::Token::Kind::_Name:                                              \
     return std::make_unique<nodes::_Name>(token, std::move(left), parse_right);
-      TK_MACRO(As, _)
-      TK_MACRO(And, _)
-      TK_MACRO(Or, _)
-#define TK_INCLUDE TK_OPALL
+#define TK_INCLUDE (TK_OPALL | TK_KEYBINARY)
 #include <rattle/token_macro.hpp>
     case lexer::Token::Kind::OpenBracket: {
-      auto arguments = _parse_expression<true>(state, prec::_lowest);
-      auto rbracket = state.get(true);
+      auto scope = state.enter_brace();
+      auto ctx = state.with(State::IGNORE_EOSCOM);
+      auto arguments = _parse_expression(state, prec::_lowest);
+      auto rbracket = state.get();
       if (rbracket.kind != lexer::Token::Kind::CloseBracket) {
         state.report(error_t::unterminated_bracket, token);
         state.unget(rbracket);
@@ -187,8 +187,10 @@ namespace rattle::parser {
                                                 std::move(arguments));
     }
     case lexer::Token::Kind::OpenParen: {
-      auto arguments = _parse_expression<true>(state, prec::_lowest);
-      auto rparen = state.get(true);
+      auto scope = state.enter_paren();
+      auto ctx = state.with(State::IGNORE_EOSCOM);
+      auto arguments = _parse_expression(state, prec::_lowest);
+      auto rparen = state.get();
       if (rparen.kind != lexer::Token::Kind::CloseParen) {
         state.report(error_t::unterminated_paren, token);
         state.unget(rparen);
@@ -200,6 +202,14 @@ namespace rattle::parser {
     case lexer::Token::Kind::Comma:
       return std::make_unique<nodes::Separator>(token, std::move(left),
                                                 parse_right);
+    default:
+      assert(false);
+    }
+  }
+
+  _decl_binary(parse_multik) {
+    auto ctx = state.with();
+    switch (token.kind) {
     case lexer::Token::Kind::Not: {
       auto token_ = state.get();
       if (token_.kind != lexer::Token::Kind::In) {
@@ -229,8 +239,9 @@ namespace rattle::parser {
 
   template <lexer::Token::Kind close, error_t unclosed>
   _decl_unary(parse_container) {
+    auto ctx = state.with(State::IGNORE_EOSCOM);
     auto operand = parse_right;
-    auto token_ = state.get(true);
+    auto token_ = state.get();
     if (token_.kind != close) {
       state.report(unclosed, token);
       state.unget(token_);
@@ -242,18 +253,21 @@ namespace rattle::parser {
 #undef parse_right
 
   _decl_unary(parse_paren) {
+    auto scope = state.enter_paren();
     return parse_container<lexer::Token::Kind::CloseParen,
                            error_t::unterminated_paren>(state, prec::_lowest,
                                                         token);
   }
 
   _decl_unary(parse_bracket) {
+    auto scope = state.enter_bracket();
     return parse_container<lexer::Token::Kind::CloseBracket,
                            error_t::unterminated_bracket>(state, prec::_lowest,
                                                           token);
   }
 
   _decl_unary(parse_brace) {
+    auto scope = state.enter_brace();
     return parse_container<lexer::Token::Kind::CloseBrace,
                            error_t::unterminated_brace>(state, prec::_lowest,
                                                         token);

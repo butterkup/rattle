@@ -22,10 +22,10 @@ namespace rattle::parser {
     in,                // a in seq    a not in seq
     plus,              // a + b
     minus = plus,      // a - b
-    divide,            // a / b
-    modulus = divide,  // a % b
     matmul,            // a @ b
     multiply = matmul, // a * b
+    divide,            // a / b
+    modulus = divide,  // a % b
     uplus,             // +a
     uminus = uplus,    // -a
     invert = uplus,    // ~a

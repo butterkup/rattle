@@ -26,28 +26,89 @@ namespace rattle {
         : type(type), start(start), end(end) {}
     };
 
+    namespace __detail {
+      struct ContextSetting;
+      struct Scope;
+      struct Scopes {
+        int paren, brace, bracket;
+      };
+    } // namespace __detail
+
     class State {
       Lexer &lexer;
       std::deque<lexer::Token> &stash;
       std::deque<Error> &errors;
+      std::deque<int> settings;
       bool hit_eot;
+      int context;
+      __detail::Scopes scopes;
+
+      void push(char setting = DEFAULT);
+      void pop();
 
     public:
+      friend struct __detail::ContextSetting;
+      friend struct __detail::Scope;
+      enum : char {
+        NONE = 0,
+        IGNORE_EOS = 1,
+        IGNORE_COMMENTS = 2,
+        DEFAULT = IGNORE_COMMENTS,
+        IGNORE_EOSCOM = IGNORE_COMMENTS | IGNORE_EOS
+      };
       State(State &&) = delete;
       State(State const &) = delete;
       State(Lexer &lexer, std::deque<lexer::Token> &stash,
-            std::deque<Error> &errors);
+            std::deque<Error> &errors)
+        : lexer(lexer), stash(stash), errors(errors), settings(),
+          hit_eot(false), context(DEFAULT), scopes(0) {}
       State(Lexer &lexer, std::deque<lexer::Token> &stash,
-            std::deque<Error> &errors, State const &state);
-      lexer::Token get(bool ignore_eos = false, bool ignore_comments = true);
-      void unget(lexer::Token const &);
+            std::deque<Error> &errors, State const &state)
+        : lexer(lexer), stash(stash), errors(errors), settings(state.settings),
+          hit_eot(state.hit_eot), context(state.context), scopes(state.scopes) {
+      }
+
+      bool test(char setting) const;
+      bool in_paren() const;
+      bool in_bracket() const;
+      bool in_brace() const;
+      char setting() const;
       bool empty() const;
+      __detail::ContextSetting with(char setting = DEFAULT);
+      __detail::Scope enter_paren();
+      __detail::Scope enter_bracket();
+      __detail::Scope enter_brace();
+      lexer::Token get();
+      void unget(lexer::Token const &);
       void report(error_t error, lexer::Location const &start,
                   lexer::Location const &end);
       void report(error_t error, lexer::Token const &start,
                   lexer::Token const &end);
       void report(error_t error, lexer::Token const &token);
     };
+
+    namespace __detail {
+      struct Scope {
+        Scope(Scope &&) = delete;
+        Scope(Scope const &) = delete;
+        Scope(int &scope_cnt): scope_count(scope_cnt) { scope_count++; }
+        ~Scope() { scope_count--; }
+
+      private:
+        int &scope_count;
+      };
+
+      struct ContextSetting {
+        State &managed;
+        ContextSetting(ContextSetting &&) = delete;
+        ContextSetting(ContextSetting const &) = delete;
+        ContextSetting(State &managed): managed(managed) {}
+        ContextSetting(State &managed, char setting): managed(managed) {
+          managed.push(setting);
+        }
+        ~ContextSetting() { managed.pop(); }
+      };
+    } // namespace __detail
   } // namespace parser
 
   class Parser {

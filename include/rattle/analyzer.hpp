@@ -1,12 +1,12 @@
 #pragma once
 
-#include <rattle/parser_nodes.hpp>
+#include "parser_nodes.hpp"
 
 namespace rattle::analyzer {
   enum class node_t {
 #define TK_MACRO(Name, _) Name,
 #define TK_INCLUDE TK_ALL_NODES
-#include <rattle/token_macro.hpp>
+#include "token_macro.hpp"
   };
 
   const char *to_string(node_t type);

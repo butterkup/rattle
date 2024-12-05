@@ -6,13 +6,14 @@
 
 namespace rattle::parser {
   static void expect_eos(State &state) {
+    auto ctx = state.with(State::IGNORE_COMMENTS);
     auto token = state.get();
     switch (token.kind) {
     case lexer::Token::Kind::CloseBrace:
       state.unget(token);
     case lexer::Token::Kind::Eos:
     case lexer::Token::Kind::Eot:
-      break;
+      return;
     default:
       state.report(error_t::expected_eos, token);
       state.unget(token);
@@ -65,16 +66,20 @@ namespace rattle::parser {
 
   static auto block_stmt(State &state, lexer::Token const &brace) {
     std::vector<std::unique_ptr<nodes::Statement>> stmts;
+    auto scope = state.enter_brace();
     while (true) {
       if (state.empty()) {
         state.report(error_t::unterminated_brace, brace);
         break;
       }
-      auto token = state.get(true);
-      if (token.kind == lexer::Token::Kind::CloseBrace) {
-        break;
+      {
+        auto ctx = state.with(State::IGNORE_EOSCOM);
+        auto token = state.get();
+        if (token.kind == lexer::Token::Kind::CloseBrace) {
+          break;
+        }
+        state.unget(token);
       }
-      state.unget(token);
       stmts.emplace_back(parse_statement(state));
     }
     stmts.shrink_to_fit();
@@ -95,9 +100,17 @@ namespace rattle::parser {
   }
 
   static auto except_stmt(State &state, lexer::Token const &kwd) {
-    auto captured = parse_expression(state);
-    auto token = state.get(true);
+    std::unique_ptr<nodes::Expression> captured;
     std::unique_ptr<nodes::Block> handler;
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto token = state.get();
+    if (token.kind == lexer::Token::Kind::OpenBrace) {
+      handler = block_stmt(state, token);
+    } else {
+      state.unget(token);
+      captured = parse_expression(state);
+    }
+    token = state.get();
     if (token.kind == lexer::Token::Kind::OpenBrace) {
       handler = block_stmt(state, token);
     } else {
@@ -108,7 +121,8 @@ namespace rattle::parser {
   }
 
   static auto lastly_stmt(State &state, lexer::Token const &kwd) {
-    auto brace = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -119,7 +133,8 @@ namespace rattle::parser {
   }
 
   static auto else_stmt(State &state, lexer::Token const &kwd) {
-    auto brace = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -130,7 +145,8 @@ namespace rattle::parser {
   }
 
   static auto try_stmt(State &state, lexer::Token const &kwd) {
-    auto token = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto token = state.get();
     std::unique_ptr<nodes::Block> try_block;
     if (token.kind == lexer::Token::Kind::OpenBrace) {
       try_block = block_stmt(state, token);
@@ -139,7 +155,7 @@ namespace rattle::parser {
     }
     std::vector<std::unique_ptr<nodes::Except>> handlers;
     while (true) {
-      token = state.get(true);
+      token = state.get();
       if (token.kind == lexer::Token::Kind::Except) {
         handlers.emplace_back(except_stmt(state, token));
       } else {
@@ -147,14 +163,14 @@ namespace rattle::parser {
         break;
       }
     }
-    token = state.get(true);
+    token = state.get();
     std::unique_ptr<nodes::Else> else_block;
     if (token.kind == lexer::Token::Kind::Else) {
       else_block = else_stmt(state, token);
     } else {
       state.unget(token);
     }
-    token = state.get(true);
+    token = state.get();
     std::unique_ptr<nodes::Lastly> lastly_block;
     if (token.kind == lexer::Token::Kind::Else) {
       lastly_block = lastly_stmt(state, token);
@@ -167,7 +183,8 @@ namespace rattle::parser {
 
   static auto with_stmt(State &state, lexer::Token const &kwd) {
     auto contexts = parse_expression(state);
-    auto brace = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -180,7 +197,8 @@ namespace rattle::parser {
 
   static auto for_stmt(State &state, lexer::Token const &kwd) {
     auto bindings = parse_expression(state);
-    auto brace = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -193,7 +211,8 @@ namespace rattle::parser {
 
   static auto while_stmt(State &state, lexer::Token const &kwd) {
     auto condition = parse_expression(state);
-    auto brace = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -206,14 +225,15 @@ namespace rattle::parser {
 
   static auto if_stmt(State &state, lexer::Token const &kwd) {
     auto condition = parse_expression(state);
-    auto token = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto token = state.get();
     std::unique_ptr<nodes::Block> body;
     if (token.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, token);
     } else {
       state.unget(token);
     }
-    token = state.get(true);
+    token = state.get();
     std::unique_ptr<nodes::Else> else_block;
     if (token.kind == lexer::Token::Kind::Else) {
       else_block = else_stmt(state, token);
@@ -225,19 +245,20 @@ namespace rattle::parser {
   }
 
   static auto class_stmt(State &state, lexer::Token const &klass) {
-    auto name = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto name = state.get();
     if (name.kind != lexer::Token::Kind::Identifier) {
       state.unget(name);
       name = klass;
     }
-    auto paren = state.get(true);
+    auto paren = state.get();
     std::unique_ptr<nodes::Expression> bases;
     if (paren.kind == lexer::Token::Kind::OpenParen) {
       bases = (state.unget(paren), parse_expression(state));
     } else {
       state.unget(paren);
     }
-    auto brace = state.get(true);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -250,7 +271,8 @@ namespace rattle::parser {
 
   static std::unique_ptr<nodes::Statement> fn_stmt(State &state,
                                                    lexer::Token const &fn) {
-    auto name = state.get(true);
+    auto ctx = state.with(State::IGNORE_EOSCOM);
+    auto name = state.get();
     switch (name.kind) {
     case lexer::Token::Kind::OpenParen: {
       return (state.unget(name), state.unget(fn), expr_stmt(state));
@@ -261,13 +283,13 @@ namespace rattle::parser {
       state.unget(name);
       name = fn;
     }
-    auto paren = state.get(true);
+    auto paren = state.get();
     state.unget(paren);
     std::unique_ptr<nodes::Expression> params;
     if (paren.kind == lexer::Token::Kind::OpenParen) {
       params = parse_expression(state);
     }
-    auto brace = state.get(true);
+    auto brace = state.get();
     std::unique_ptr<nodes::Block> body;
     if (brace.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, brace);
@@ -280,6 +302,7 @@ namespace rattle::parser {
 
   std::unique_ptr<nodes::Statement> assign_stmt(State &state) {
     auto assignable = parse_expression(state);
+    auto ctx = state.with();
     auto token = state.get();
     switch (token.kind) {
 #define TK_INCLUDE TK_ASSIGN
@@ -327,9 +350,18 @@ namespace rattle::parser {
         case Kind::Lastly:       return lastly_stmt(state, token);
         case Kind::NonLocal:     return nonlocal_stmt(state, token);
         case Kind::Continue:     return continue_stmt(state, token);
-        case Kind::CloseParen:   state.report(error_t::dangling_paren, token); break;
-        case Kind::CloseBrace:   state.report(error_t::dangling_brace, token); break;
-        case Kind::CloseBracket: state.report(error_t::dangling_bracket, token); break;
+        case Kind::CloseParen:
+          if (not state.in_paren())
+            state.report(error_t::dangling_paren, token);
+          break;
+        case Kind::CloseBrace:
+          if (not state.in_brace())
+            state.report(error_t::dangling_brace, token);
+          break;
+        case Kind::CloseBracket:
+          if (not state.in_bracket())
+            state.report(error_t::dangling_bracket, token);
+          break;
         default:
           state.unget(token);
           auto expr = assign_stmt(state);

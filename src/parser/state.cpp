@@ -3,10 +3,35 @@
 #include <rattle/parser.hpp>
 
 namespace rattle::parser {
-  lexer::Token State::get(bool ignore_eos, bool ignore_comments) {
+  void State::unget(lexer::Token const &token) { stash.push_back(token); }
+  bool State::test(char setting) const { return context & setting; }
+  char State::setting() const { return context; }
+  bool State::empty() const { return hit_eot; }
+  bool State::in_paren() const { return scopes.paren; }
+  bool State::in_bracket() const { return scopes.bracket; }
+  bool State::in_brace() const { return scopes.brace; }
+  __detail::Scope State::enter_paren() { return scopes.paren; }
+  __detail::Scope State::enter_bracket() { return scopes.bracket; }
+  __detail::Scope State::enter_brace() { return scopes.brace; }
+
+  __detail::ContextSetting State::with(char setting) {
+    return {*this, setting};
+  }
+
+  void State::push(char setting) {
+    settings.push_back(context);
+    context = setting;
+  }
+
+  void State::pop() {
+    context = settings.back();
+    settings.pop_back();
+  }
+
+  lexer::Token State::get() {
     auto const ignore = [ & ](lexer::Token const &t) {
-      return (ignore_eos and t.kind == lexer::Token::Kind::Eos) or
-             (ignore_comments and t.kind == lexer::Token::Kind::HashTag);
+      return (test(IGNORE_EOS) and t.kind == lexer::Token::Kind::Eos) or
+             (test(IGNORE_COMMENTS) and t.kind == lexer::Token::Kind::HashTag);
     };
     while (stash.size()) {
       auto token = stash.front();
@@ -48,15 +73,5 @@ namespace rattle::parser {
   void State::report(error_t error, lexer::Token const &token) {
     errors.emplace_back(error, token.start, token.end);
   }
-  bool State::empty() const { return hit_eot; }
-  void State::unget(lexer::Token const &token) { stash.push_back(token); }
-
-  State::State(Lexer &lexer, std::deque<lexer::Token> &stash,
-               std::deque<Error> &errors)
-    : lexer(lexer), stash(stash), errors(errors), hit_eot(false) {}
-  State::State(Lexer &lexer, std::deque<lexer::Token> &stash,
-               std::deque<Error> &errors, State const &state)
-    : lexer(lexer), stash(stash), errors(errors), hit_eot(state.hit_eot) {}
-
 } // namespace rattle::parser
 

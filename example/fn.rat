@@ -3,7 +3,7 @@ fn hello(name) {
   return "Hey %s?" % name.title()
 }
 
-fn sum(*numbers) {
+fn sum(numbers) {
   total = 0
   for ( number in numbers )
     total += number
@@ -11,26 +11,27 @@ fn sum(*numbers) {
 }
 
 fn count(start, stop) {
-  step = 1 if start <= stop else -1
+  # step = 1 if start <= stop else -1
   while start < stop {
     print("Current: value=%s" % start)
     start += step
   }
 }
 
-fn starmap(function, *iterators) {
-  for args in zip(*iterators) {
-    yield function(*args)
+fn starmap(function, iterators) {
+  for args in zip(iterators) {
+    yield function(args)
   }
 }
 
-greeter = fn name "Hello %s, how was your day?" % name
+greeter = fn (name) "Hello %s, how was your day?" % name
 
 identity = fn(x) x
 x2 = fn(x) 2 * x
-x3 = fn(x) { return 3 * x }
-r4 = fn() { return 4 }
+# x3 = fn(x) { return 3 * x; }
+# r4 = fn() { return 4 }
 r5 = fn() 5
+#get_map = fn() { "name": "John", "age": 21 }
 x5p6 = fn(x, y) (5 * x, 6 + y)
 gen = fn(x) yield x3(x)
 
