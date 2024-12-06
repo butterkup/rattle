@@ -1,9 +1,11 @@
+#ifndef RATTLE_SOURCE_ONLY
 #include "parser.hpp"
 #include "rattle/lexer.hpp"
 #include <memory>
 #include <rattle/parser.hpp>
 #include <rattle/parser_nodes.hpp>
 #include <utility>
+#endif
 
 namespace rattle {
   std::vector<std::unique_ptr<parser::nodes::Statement>> Parser::parse() {

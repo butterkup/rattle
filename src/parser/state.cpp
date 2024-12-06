@@ -1,6 +1,8 @@
+#ifndef RATTLE_SOURCE_ONLY
 #include <deque>
 #include <rattle/lexer.hpp>
 #include <rattle/parser.hpp>
+#endif
 
 namespace rattle::parser {
   void State::unget(lexer::Token const &token) { stash.push_back(token); }

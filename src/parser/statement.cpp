@@ -1,8 +1,10 @@
+#ifndef RATTLE_SOURCE_ONLY
 #include "parser.hpp"
 #include <memory>
 #include <rattle/category.hpp>
 #include <rattle/parser.hpp>
 #include <rattle/parser_nodes.hpp>
+#endif
 
 namespace rattle::parser {
   static auto expect_eos(State &state) {
@@ -16,7 +18,7 @@ namespace rattle::parser {
     case lexer::Token::Kind::Eot:
       break;
     default:
-      state.report(error_t::expected_eos, token);
+      state.report(error_t::unterminated_statement, token);
       state.unget(token);
     }
     return token;

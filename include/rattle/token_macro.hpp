@@ -63,10 +63,11 @@
   TK_MACRO(BinaryExpr, "")
   TK_MACRO(UnaryExpr, "")
   TK_MACRO(Statement, "")
-  TK_MACRO(ExprStatement, "")
 #endif
 
 #if TK_INCLUDE & TK_EXTR_NODES
+  TK_MACRO(ExprStatement, "")
+  TK_MACRO(IfElse, "")
   TK_MACRO(Block, "")
 #endif
 

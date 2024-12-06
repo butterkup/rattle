@@ -34,14 +34,15 @@ ERROR_MACRO(empty_bin_literal)
 #endif
 
 #if ERROR_INCLUDE & PARSER_ERROR
-ERROR_MACRO(unterminated_brace)
-ERROR_MACRO(unterminated_paren)
-ERROR_MACRO(unterminated_bracket)
 ERROR_MACRO(dangling_brace)
 ERROR_MACRO(dangling_paren)
 ERROR_MACRO(dangling_bracket)
+ERROR_MACRO(unterminated_brace)
+ERROR_MACRO(unterminated_paren)
+ERROR_MACRO(unterminated_bracket)
+ERROR_MACRO(unterminated_statement)
+ERROR_MACRO(unterminated_if_else_expr)
 ERROR_MACRO(incomplete_operator_notin)
-ERROR_MACRO(expected_eos)
 #endif
 
 #undef ERROR_INCLUDE

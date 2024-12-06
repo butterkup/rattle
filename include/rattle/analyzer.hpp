@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef RATTLE_SOURCE_ONLY
 #include "parser_nodes.hpp"
+#endif
 
 namespace rattle::analyzer {
   enum class node_t {

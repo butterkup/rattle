@@ -85,7 +85,7 @@ void _parse_file(std::string content, std::string const &file) {
   std::cout << "Parser emitted " << parser.errors.size() << " errors\n";
   while (parser.errors.size()) {
     rattle::parser::Error &error = parser.errors.front();
-    std::cout << "Error(\x1b[91m" << rattle::parser::to_string(error.type)
+    std::cerr << "Error(\x1b[91m" << rattle::parser::to_string(error.type)
               << "\x1b[0m, start=" << error.start << ", end=" << error.end
               << ")\n";
     parser.errors.pop_front();

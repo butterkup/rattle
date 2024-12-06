@@ -1,8 +1,10 @@
 #pragma once
 
+#ifndef RATTLE_SOURCE_ONLY
 #include "category.hpp"
 #include <deque>
 #include <string>
+#endif
 
 namespace rattle {
   namespace lexer {

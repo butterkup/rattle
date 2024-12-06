@@ -1,10 +1,12 @@
 #pragma once
 
+#ifndef RATTLE_SOURCE_ONLY
 #include "category.hpp"
 #include "lexer.hpp"
 #include <memory>
 #include <optional>
 #include <vector>
+#endif
 
 namespace rattle::parser::nodes {
 #pragma GCC diagnostic push
@@ -56,6 +58,15 @@ namespace rattle::parser::nodes {
     UnaryExpr(lexer::Token const &operator_,
               std::unique_ptr<Expression> operand)
       : Expression(operator_), operand(std::move(operand)) {}
+    _visit;
+  };
+
+  struct IfElse: Expression {
+    std::unique_ptr<Expression> condition, if_expr, else_expr;
+    IfElse(lexer::Token const &tk, std::unique_ptr<Expression> cond,
+           std::unique_ptr<Expression> if_, std::unique_ptr<Expression> else_)
+      : Expression(tk), condition(std::move(cond)), if_expr(std::move(if_)),
+        else_expr(std::move(else_)) {}
     _visit;
   };
 

@@ -8,6 +8,7 @@ namespace rattle::parser {
     yield,             // yield <expr>
     comma,             // a , b
     colon,             // a : b
+    if_else,           // <expr1> if <cond> else <expr2>
     logic_or,          // a or b
     logic_and,         // a and b
     logic_not,         // not a

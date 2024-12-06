@@ -1,3 +1,4 @@
+#ifndef RATTLE_SOURCE_ONLY
 #include "parser.hpp"
 #include "precedence.hpp"
 #include <cassert>
@@ -6,9 +7,10 @@
 #include <rattle/parser.hpp>
 #include <rattle/parser_nodes.hpp>
 #include <utility>
+#endif
 
 namespace rattle::parser {
-  using UniqueExpr = std::unique_ptr<nodes::Expression>;
+#define UniqueExpr std::unique_ptr<nodes::Expression>
   typedef UniqueExpr (*ParseUnary)(State &, prec, lexer::Token &);
   typedef UniqueExpr (*ParseBinary)(State &, prec, lexer::Token &, UniqueExpr);
 
@@ -61,6 +63,7 @@ namespace rattle::parser {
       case Kind::Invert:       return {prec::invert,     parse_unary,    prec::none,       nullptr     };
 
       case Kind::Is:           return {prec::none,       nullptr,        prec::is,         parse_multik};
+      case Kind::If:           return {prec::none,       nullptr,        prec::if_else,    parse_binary};
       case Kind::In:           return {prec::none,       nullptr,        prec::in,         parse_binary};
       case Kind::Not:          return {prec::logic_not,  parse_unary,    prec::in,         parse_multik};
 
@@ -85,7 +88,7 @@ namespace rattle::parser {
       case Kind::None:         return {prec::primary,    parse_primary,  prec::none,       nullptr     };
       case Kind::False:        return {prec::primary,    parse_primary,  prec::none,       nullptr     };
 
-      case Kind::Error:        return {prec::primary,    parse_unary,    prec::primary,    parse_binary};
+      case Kind::Error:        return {prec::_lowest,    parse_unary,    prec::_lowest,    parse_binary};
       default:                 return {prec::none,       nullptr,        prec::none,       nullptr     };
     }
   }
@@ -198,10 +201,26 @@ namespace rattle::parser {
       return std::make_unique<nodes::Call>(token, std::move(left),
                                            std::move(arguments));
     }
+    case lexer::Token::Kind::If: {
+      auto condition = parse_right;
+      auto else_tk = state.get();
+      UniqueExpr right;
+      if (else_tk.kind == lexer::Token::Kind::Else) {
+        right = parse_right;
+      } else {
+        state.report(error_t::unterminated_if_else_expr, else_tk);
+        state.unget(else_tk);
+      }
+      return std::make_unique<nodes::IfElse>(token, std::move(condition),
+                                             std::move(left), std::move(right));
+    }
     case lexer::Token::Kind::Colon:
     case lexer::Token::Kind::Comma:
       return std::make_unique<nodes::Separator>(token, std::move(left),
                                                 parse_right);
+    case lexer::Token::Kind::Error:
+      return std::make_unique<nodes::BinaryExpr>(token, std::move(left),
+                                                 parse_right);
     default:
       assert(false);
     }

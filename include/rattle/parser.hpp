@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef RATTLE_SOURCE_ONLY
 #include "category.hpp"
 #include "lexer.hpp"
 #include "parser_nodes.hpp"
@@ -7,6 +8,7 @@
 #include <deque>
 #include <memory>
 #include <vector>
+#endif
 
 namespace rattle {
   namespace parser {

@@ -1,5 +1,7 @@
+#ifndef RATTLE_SOURCE_ONLY
 #include <rattle/analyzer.hpp>
 #include <rattle/parser_nodes.hpp>
+#endif
 
 namespace rattle::analyzer {
   const char *to_string(node_t type) {
