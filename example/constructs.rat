@@ -4,6 +4,10 @@ for index in range(100) {
   print("%s ** 2 = %s" % index, index ** 2)
 }
 
+for a, b, c in (1, 2, 3), (4, 5, 6), (8, 9, 10) {
+  print("%s + %s + %s = %s" % (a, b, c, a + b + c));
+}
+
 counter = 100
 while counter {
   print("counter: %s" % counter)

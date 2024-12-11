@@ -189,6 +189,15 @@
 # endif
 #endif
 
+#if TK_INCLUDE & TK_CONTAINERS
+ TK_MACRO(None, "")
+ TK_MACRO(Error, "")
+ TK_MACRO(Dict, "")
+ TK_MACRO(List, "")
+ TK_MACRO(Tuple, "")
+ TK_MACRO(Group, "")
+#endif
+
 #undef TK_INCLUDE
 #undef TK_MACRO
 

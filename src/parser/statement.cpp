@@ -31,13 +31,11 @@ namespace rattle::parser {
   }
 
   static auto continue_stmt(State &state, lexer::Token const &kwd) {
-    expect_eos(state);
-    return std::make_unique<nodes::Continue>(kwd);
+    return std::make_unique<nodes::Continue>((expect_eos(state), kwd));
   }
 
   static auto break_stmt(State &state, lexer::Token const &kwd) {
-    expect_eos(state);
-    return std::make_unique<nodes::Break>(kwd);
+    return std::make_unique<nodes::Break>((expect_eos(state), kwd));
   }
 
   static auto return_stmt(State &state, lexer::Token const &kwd) {
@@ -71,10 +69,9 @@ namespace rattle::parser {
   static std::unique_ptr<nodes::Expression> non_brace_expr(State &state) {
     auto token = state.get();
     state.unget(token);
-    if (token.kind != lexer::Token::Kind::OpenBrace) {
-      return parse_expression(state);
-    }
-    return nullptr;
+    return token.kind != lexer::Token::Kind::OpenBrace ?
+             parse_expression(state) :
+             nullptr;
   }
 
   static auto block_stmt(State &state, lexer::Token const &brace) {
@@ -317,26 +314,25 @@ namespace rattle::parser {
   case lexer::Token::Kind::_Name:                                              \
     return std::make_unique<nodes::_Name>(token, std::move(assignable),        \
                                           expr_eos(state));
-
 #include <rattle/token_macro.hpp>
     default:
       state.unget(token);
-      return std::make_unique<nodes::ExprStatement>(expect_eos(state),
-                                                    std::move(assignable));
+      if (assignable) {
+        return std::make_unique<nodes::ExprStatement>(expect_eos(state),
+                                                      std::move(assignable));
+      }
     }
+    return nullptr;
   }
 
   std::unique_ptr<nodes::Statement> parse_statement(State &state) {
-    auto ctx = state.with();
+    auto ctx = state.with(State::IGNORE_EOSCOM);
     using Kind = lexer::Token::Kind;
     // clang-format off
     while (true) {
       auto token = state.get();
       switch(token.kind) {
-        case Kind::Semicolon:    break;
-        case Kind::Newline:      break;
         case Kind::Error:        break;
-        case Kind::HashTag:      break;
         case Kind::Eot:          return nullptr;
         case Kind::If:           return if_stmt(state, token);
         case Kind::Fn:           return fn_stmt(state, token);
@@ -373,9 +369,8 @@ namespace rattle::parser {
           break;
         default:
           state.unget(token);
-          auto assignment = assign_stmt(state);
-          return assignment? std::move(assignment)
-            : std::make_unique<nodes::Statement>(state.get());
+          if(auto stmt = assign_stmt(state); stmt) return stmt;
+          else return std::make_unique<nodes::Statement>(state.get());
       }
     }
     // clang-format on

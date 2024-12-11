@@ -28,11 +28,12 @@ namespace rattle::parser::nodes {
 
 #undef CREATE_VISIT
 
-  // Node implementations
+  // Virtual node visitor methods
 #define _node_visit(qualifier)                                                 \
   virtual void visit(Visitor &visitor) qualifier { visitor.visit(*this); }
 #define _visit _node_visit(override)
 
+  // Node implementations
   struct Statement {
     lexer::Token token;
     Statement(lexer::Token const &token): token(token) {}
@@ -61,12 +62,12 @@ namespace rattle::parser::nodes {
     _visit;
   };
 
-  struct IfElse: Expression {
-    std::unique_ptr<Expression> condition, if_expr, else_expr;
+  struct IfElse: BinaryExpr {
+    std::unique_ptr<Expression> condition;
     IfElse(lexer::Token const &tk, std::unique_ptr<Expression> cond,
            std::unique_ptr<Expression> if_, std::unique_ptr<Expression> else_)
-      : Expression(tk), condition(std::move(cond)), if_expr(std::move(if_)),
-        else_expr(std::move(else_)) {}
+      : BinaryExpr(tk, std::move(if_), std::move(else_)),
+        condition(std::move(cond)) {}
     _visit;
   };
 
@@ -258,13 +259,19 @@ namespace rattle::parser::nodes {
   };
 
   struct Container: Expression {
-    enum class Type { None, Error, Dict, List, Tuple, Group } type;
+    enum class Type {
+#define TK_INCLUDE TK_CONTAINERS
+#define TK_MACRO(Name, _) Name,
+#include "token_macro.hpp"
+    } type;
     std::unique_ptr<Expression> entries;
     Container(lexer::Token const &op, Type type,
               std::unique_ptr<Expression> entries)
       : Expression(op), type(type), entries(std::move(entries)) {}
     _visit;
   };
+  
+  const char *to_string(Container::Type type);
 
 #define INH_ASSIGN(_Name)                                                      \
   struct _Name: Assignment {                                                   \

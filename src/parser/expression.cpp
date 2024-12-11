@@ -227,13 +227,14 @@ namespace rattle::parser {
   }
 
   _decl_binary(parse_multik) {
-    auto ctx = state.with();
     switch (token.kind) {
     case lexer::Token::Kind::Not: {
       auto token_ = state.get();
       if (token_.kind != lexer::Token::Kind::In) {
         state.report(error_t::incomplete_operator_notin, token);
         state.unget(token_);
+        return std::make_unique<nodes::BinaryExpr>(token, std::move(left),
+                                                   parse_right);
       }
       token.end = token_.end;
       token.proc.end = token_.proc.end;

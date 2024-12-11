@@ -55,9 +55,9 @@ namespace rattle {
       enum : std::uint8_t {
         // Bit state settings.
         NONE = 0,
-        IGNORE_COMMENTS = 2,
-        IGNORE_NEWLINE = 4,
-        IGNORE_SEMICOLON = 8,
+        IGNORE_COMMENTS = 1,
+        IGNORE_NEWLINE = 2,
+        IGNORE_SEMICOLON = 4,
 
         // Shorter constants, most used.
         DEFAULT = IGNORE_COMMENTS,

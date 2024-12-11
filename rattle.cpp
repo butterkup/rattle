@@ -63,8 +63,8 @@ void _lex_file(std::string content, std::string const &file) {
     }
   }
   for (auto &error : lexer.errors) {
-    std::cerr << file << ": Error(\x1b[31m"
-              << rattle::lexer::to_string(error.type) << "\x1b[0m, \x1b[91;1m"
+    std::cerr << file << ": Error(\x1b[31m" << to_string(error.type)
+              << "\x1b[0m, \x1b[91;1m"
               << rattle::lexer::token_content(content, error.start.offset,
                                               error.end.offset)
               << "\x1b[0m, " << error.start << ", " << error.end << ")\n";
@@ -78,17 +78,20 @@ void _parse_file(std::string content, std::string const &file) {
   rattle::analyzer::NodeType node_type;
   for (auto &stmt : stmts) {
     /*std::cout << "Type: " << PrintableToken(stmt->token, content) << '\n';*/
-    stmt->visit(node_type);
-    std::cout << "Type: "
-              << rattle::analyzer::to_string(node_type.get_type(*stmt)) << '\n';
+    if (node_type.get_type(*stmt) == rattle::analyzer::node_t::ExprStatement) {
+      auto expr_stmt =
+        static_cast<rattle::parser::nodes::ExprStatement *>(stmt.get());
+      std::cout << "Type: " << to_string(node_type.get_type(*expr_stmt->expr))
+                << '\n';
+    } else {
+      std::cout << "Type: " << to_string(node_type.get_type(*stmt)) << '\n';
+    }
   }
   std::cout << "Parser emitted " << parser.errors.size() << " errors\n";
-  while (parser.errors.size()) {
-    rattle::parser::Error &error = parser.errors.front();
-    std::cerr << "Error(\x1b[91m" << rattle::parser::to_string(error.type)
+  for (auto &error : parser.errors) {
+    std::cerr << "Error(\x1b[91m" << to_string(error.type)
               << "\x1b[0m, start=" << error.start << ", end=" << error.end
               << ")\n";
-    parser.errors.pop_front();
   }
 }
 

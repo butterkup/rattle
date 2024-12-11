@@ -4,10 +4,10 @@ namespace rattle::parser {
   enum class prec : unsigned {
     none,              // All other tokens
     _lowest,           // Sentinel for lowest precedence, don't use.
-    as,                // some.expr.here as name
     yield,             // yield <expr>
     comma,             // a , b
     colon,             // a : b
+    as,                // some.expr.here as name
     if_else,           // <expr1> if <cond> else <expr2>
     logic_or,          // a or b
     logic_and,         // a and b
