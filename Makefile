@@ -4,7 +4,6 @@ SRC_DIR=$(CUR_DIR)/src
 LIB_DIR=$(CUR_DIR)/lib
 LIBRARY=$(LIB_DIR)/librattle.so
 PROGRAM=rattle
-#ifndef RATTLE_SOURCE_ONLY
 
 CXX=clang++
 CXXFLAGS=-std=c++20 -fPIC -Wall -I$(INC_DIR)
@@ -18,7 +17,7 @@ endif
 SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)
 HEADERS=$(shell find $(INC_DIR) -name '*.hpp' -type f)
 OBJECTS=$(subst .cpp,.o,$(SOURCES))
-PREPROCESSED=$(subst .hpp,.ii,$(shell find $(INC_DIR) -name '*.hpp' -type f))
+PREPROCESSED=$(subst .hpp,.ii,$(HEADERS))
 PREPROCESSED+=$(subst .cpp,.ii,$(SOURCES))
 TO_CLEAN=$(OBJECTS) $(PROGRAM) $(PROGRAM).o $(LIBRARY) $(PREPROCESSED)
 STAT_TARGETS=$(HEADERS) $(SOURCES)
@@ -44,8 +43,7 @@ $(LIBRARY): $(OBJECTS)
 	@echo Creating library: $@
 
 define preprocess_recipe
-	@echo $@
-	@$(CXX) $(CXXFLAGS) -DRATTLE_SOURCE_ONLY -E -o $@ $< 2>/dev/null || :
+	$(CXX) $(CXXFLAGS) -DRATTLE_SOURCE_ONLY -E -o $@ $<
 endef
 
 %.ii: %.hpp

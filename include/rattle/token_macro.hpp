@@ -1,7 +1,9 @@
 // clang-format off
-#ifndef TK_MACRO
-# error "Must define macro TK_MACRO(kind, string_rep) to include this template."
-# define TK_MACRO(_, __) // to stop clangd from complaining, unreachable
+#ifndef RATTLE_SOURCE_ONLY
+# ifndef TK_MACRO
+#  error "Must define macro TK_MACRO(kind, string_rep) to include this template."
+#  define TK_MACRO(_, __) // to stop clangd from complaining, unreachable
+# endif
 #endif
 
 #include "category.hpp"
@@ -73,7 +75,6 @@
 
 #if TK_INCLUDE & TK_PRIBINARY
  TK_MACRO(Separator, "")
- TK_MACRO(AnonFn, "")
  TK_MACRO(NotIn, "")
  TK_MACRO(IsNot, "")
  TK_MACRO(Call, "")
@@ -200,4 +201,5 @@
 
 #undef TK_INCLUDE
 #undef TK_MACRO
+// clang-format on
 

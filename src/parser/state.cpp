@@ -32,27 +32,25 @@ namespace rattle::parser {
 
   lexer::Token State::get() {
     // clang-format off
-    auto const ignore = [ & ](lexer::Token const &t) {
+    auto const ignore = [this](lexer::Token const &t) {
       return (test(IGNORE_NEWLINE) and t.kind == lexer::Token::Kind::Newline) or
-             (test(IGNORE_SEMICOLON) and t.kind == lexer::Token::Kind::Semicolon) or
-             (test(IGNORE_COMMENTS) and t.kind == lexer::Token::Kind::HashTag);
+             (test(IGNORE_COMMENTS) and t.kind == lexer::Token::Kind::HashTag) or
+             (test(IGNORE_SEMICOLON) and t.kind == lexer::Token::Kind::Semicolon);
     };
     // clang-format on
     while (stash.size()) {
       auto token = stash.front();
       stash.pop_front();
-      if (ignore(token)) {
-        continue;
+      if (not ignore(token)) {
+        return token;
       }
-      return token;
     }
     while (true) {
       auto token = lexer.scan();
       hit_eot = token.kind == lexer::Token::Kind::Eot;
-      if (ignore(token)) {
-        continue;
+      if (not ignore(token)) {
+        return token;
       }
-      return token;
     }
   }
 

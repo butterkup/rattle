@@ -9,5 +9,6 @@
 namespace rattle::parser {
   std::unique_ptr<nodes::Expression> parse_expression(State &state);
   std::unique_ptr<nodes::Statement> parse_statement(State &state);
+  std::unique_ptr<nodes::Fn> fn_expression(State &state, lexer::Token const &fn);
 } // namespace rattle::parser
 

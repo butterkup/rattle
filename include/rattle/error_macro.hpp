@@ -1,10 +1,13 @@
-#ifndef ERROR_MACRO
-#error "Must define macro ERROR_MACRO(error) to process errors"
-#define ERROR_MACRO(_) // Silence clang errors, unreachable
-#endif
+// clang-format off
+#ifndef RATTLE_SOURCE_ONLY
+# ifndef ERROR_MACRO
+#  error "Must define macro ERROR_MACRO(error) to process errors"
+#  define ERROR_MACRO(_) // Silence clang errors, unreachable
+# endif
 
-#ifndef ERROR_INCLUDE
-#error "Must define macro ERROR_INCLUDE to filter errors"
+# ifndef ERROR_INCLUDE
+#  error "Must define macro ERROR_INCLUDE to filter errors"
+# endif
 #endif
 
 #if ERROR_INCLUDE & LEXER_ERROR
@@ -48,4 +51,5 @@ ERROR_MACRO(incomplete_operator_notin)
 
 #undef ERROR_INCLUDE
 #undef ERROR_MACRO
+// clang-format on
 

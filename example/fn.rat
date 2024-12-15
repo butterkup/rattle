@@ -24,14 +24,5 @@ fn starmap(function, iterators) {
   }
 }
 
-greeter = fn (name) "Hello %s, how was your day?" % name
-
-identity = fn(x) x
-x2 = fn(x) 2 * x
-# x3 = fn(x) { return 3 * x; }
-# r4 = fn() { return 4 }
-r5 = fn() 5
-get_map = fn() { "name": "John", "age": 21 }
-x5p6 = fn(x, y) (5 * x, 6 + y)
-gen = fn(x) yield x3(x)
+greeter = fn (name) { return "Hello %s, how was your day?" % name }
 

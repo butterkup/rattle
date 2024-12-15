@@ -19,7 +19,7 @@ namespace rattle::analyzer {
   }
 
 #define CREATE_VISIT(_Base, _Type)                                             \
-  void _Base::visit(parser::nodes::_Type &node) { type = node_t::_Type; }
+  void _Base::visit(parser::nodes::_Type &) { type = node_t::_Type; }
 
 #define TK_MACRO(Name, _) CREATE_VISIT(NodeType, Name)
 #define TK_INCLUDE TK_ALL_NODES

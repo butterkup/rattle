@@ -24,7 +24,6 @@ namespace rattle::parser {
   _decl_unary(parse_paren);
   _decl_unary(parse_brace);
   _decl_unary(parse_bracket);
-  _decl_unary(parse_anonfn);
   _decl_unary(parse_unary);
   _decl_binary(parse_binary);
   _decl_binary(parse_multik);
@@ -67,7 +66,7 @@ namespace rattle::parser {
       case Kind::In:           return {prec::none,       nullptr,        prec::in,         parse_binary};
       case Kind::Not:          return {prec::logic_not,  parse_unary,    prec::in,         parse_multik};
 
-      case Kind::Fn:           return {prec::primary,    parse_anonfn,   prec::none,       nullptr     };
+      case Kind::Fn:           return {prec::primary,    parse_unary,    prec::none,       nullptr     };
       case Kind::Yield:        return {prec::yield,      parse_unary,    prec::none,       nullptr     };
       case Kind::As:           return {prec::none,       nullptr,        prec::as,         parse_binary};
       case Kind::Colon:        return {prec::colon,      parse_unary,    prec::colon,      parse_binary};
@@ -165,6 +164,8 @@ namespace rattle::parser {
       return std::make_unique<nodes::Yield>(token, parse_right);
     case lexer::Token::Kind::Not:
       return std::make_unique<nodes::Not>(token, parse_right);
+    case lexer::Token::Kind::Fn:
+      return fn_expression(state, token);
     default:
       assert(false);
     }
@@ -292,14 +293,6 @@ namespace rattle::parser {
                            error_t::unterminated_brace>(state, prec::_lowest,
                                                         token);
   }
-
-  _decl_unary(parse_anonfn) {
-    auto params = parse_expression(state);
-    auto body = parse_expression(state);
-    return std::make_unique<nodes::AnonFn>(token, std::move(params),
-                                           std::move(body));
-  }
-
 #undef _decl_unary
 #undef _decl_binary
 } // namespace rattle::parser

@@ -18,15 +18,11 @@ namespace rattle::parser::nodes {
 #include <rattle/token_macro.hpp>
 
   // Visitor ABC
-#define CREATE_VISIT(Type) virtual void visit(Type &) = 0
-
   struct Visitor {
-#define TK_MACRO(Name, _) CREATE_VISIT(Name);
+#define TK_MACRO(Name, _) virtual void visit(Name &) = 0;
 #define TK_INCLUDE TK_ALL_NODES
 #include "token_macro.hpp"
   };
-
-#undef CREATE_VISIT
 
   // Virtual node visitor methods
 #define _node_visit(qualifier)                                                 \
@@ -140,24 +136,20 @@ namespace rattle::parser::nodes {
   };
 
   struct Class: Statement {
-    std::optional<lexer::Token> name;
-    std::unique_ptr<Expression> bases;
+    std::unique_ptr<Expression> decl;
     std::unique_ptr<Block> body;
-    Class(lexer::Token const &kwd, std::optional<lexer::Token> const &name,
-          std::unique_ptr<Expression> bases, std::unique_ptr<Block> body)
-      : Statement(kwd), name(name), bases(std::move(bases)),
-        body(std::move(body)) {}
+    Class(lexer::Token const &kwd, std::unique_ptr<Expression> decl,
+          std::unique_ptr<Block> body)
+      : Statement(kwd), decl(std::move(decl)), body(std::move(body)) {}
     _visit;
   };
 
-  struct Fn: Statement {
-    std::optional<lexer::Token> name;
-    std::unique_ptr<Expression> params;
+  struct Fn: Expression {
+    std::unique_ptr<Expression> decl;
     std::unique_ptr<Block> body;
-    Fn(lexer::Token const &kwd, std::optional<lexer::Token> const &name,
-       std::unique_ptr<Expression> params, std::unique_ptr<Block> body)
-      : Statement(kwd), name(name), params(std::move(params)),
-        body(std::move(body)) {}
+    Fn(lexer::Token const &kwd, std::unique_ptr<Expression> decl,
+       std::unique_ptr<Block> body)
+      : Expression(kwd), decl(std::move(decl)), body(std::move(body)) {}
     _visit;
   };
 
@@ -270,7 +262,7 @@ namespace rattle::parser::nodes {
       : Expression(op), type(type), entries(std::move(entries)) {}
     _visit;
   };
-  
+
   const char *to_string(Container::Type type);
 
 #define INH_ASSIGN(_Name)                                                      \
