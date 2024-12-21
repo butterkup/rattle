@@ -111,53 +111,28 @@ namespace rattle::parser {
   static auto except_stmt(State &state, lexer::Token const &kwd) {
     auto ctx = state.with(State::IGNORE_NLCOM);
     auto captured = non_brace_expr(state);
-    std::unique_ptr<nodes::Block> handler;
-    auto token = state.get();
-    if (token.kind == lexer::Token::Kind::OpenBrace) {
-      handler = block_stmt(state, token);
-    } else {
-      state.unget(token);
-    }
+    auto handler = parse_statement(state);
     return std::make_unique<nodes::Except>(kwd, std::move(captured),
                                            std::move(handler));
   }
 
   static auto lastly_stmt(State &state, lexer::Token const &kwd) {
     auto ctx = state.with(State::IGNORE_NLCOM);
-    auto brace = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (brace.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, brace);
-    } else {
-      state.unget(brace);
-    }
+    auto body = parse_statement(state);
     return std::make_unique<nodes::Lastly>(kwd, std::move(body));
   }
 
   static auto else_stmt(State &state, lexer::Token const &kwd) {
     auto ctx = state.with(State::IGNORE_NLCOM);
-    auto brace = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (brace.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, brace);
-    } else {
-      state.unget(brace);
-    }
-    return std::make_unique<nodes::Else>(kwd, std::move(body));
+    return std::make_unique<nodes::Else>(kwd, parse_statement(state));
   }
 
   static auto try_stmt(State &state, lexer::Token const &kwd) {
     auto ctx = state.with(State::IGNORE_NLCOM);
-    auto token = state.get();
-    std::unique_ptr<nodes::Block> try_block;
-    if (token.kind == lexer::Token::Kind::OpenBrace) {
-      try_block = block_stmt(state, token);
-    } else {
-      state.unget(token);
-    }
+    auto try_block = parse_statement(state);
     std::vector<std::unique_ptr<nodes::Except>> handlers;
     while (true) {
-      token = state.get();
+      auto token = state.get();
       if (token.kind == lexer::Token::Kind::Except) {
         handlers.emplace_back(except_stmt(state, token));
       } else {
@@ -165,7 +140,7 @@ namespace rattle::parser {
         break;
       }
     }
-    token = state.get();
+    auto token = state.get();
     std::unique_ptr<nodes::Else> else_block;
     if (token.kind == lexer::Token::Kind::Else) {
       else_block = else_stmt(state, token);
@@ -180,47 +155,29 @@ namespace rattle::parser {
       state.unget(token);
     }
     return std::make_unique<nodes::Try>(
-      kwd, std::move(handlers), std::move(else_block), std::move(lastly_block));
+      kwd, std::move(try_block), std::move(handlers), std::move(else_block), std::move(lastly_block));
   }
 
   static auto with_stmt(State &state, lexer::Token const &kwd) {
     auto contexts = parse_expression(state);
     auto ctx = state.with(State::IGNORE_NLCOM);
-    auto brace = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (brace.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, brace);
-    } else {
-      state.unget(brace);
-    }
+    auto body = parse_statement(state);
     return std::make_unique<nodes::With>(kwd, std::move(contexts),
                                          std::move(body));
   }
 
   static auto for_stmt(State &state, lexer::Token const &kwd) {
-    auto bindings = parse_expression(state);
+    auto bind_expr = parse_expression(state);
     auto ctx = state.with(State::IGNORE_NLCOM);
-    auto brace = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (brace.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, brace);
-    } else {
-      state.unget(brace);
-    }
-    return std::make_unique<nodes::For>(kwd, std::move(bindings),
+    auto body = parse_statement(state);
+    return std::make_unique<nodes::For>(kwd, std::move(bind_expr),
                                         std::move(body));
   }
 
   static auto while_stmt(State &state, lexer::Token const &kwd) {
     auto condition = parse_expression(state);
     auto ctx = state.with(State::IGNORE_NLCOM);
-    auto brace = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (brace.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, brace);
-    } else {
-      state.unget(brace);
-    }
+    auto body = parse_statement(state);
     return std::make_unique<nodes::While>(kwd, std::move(condition),
                                           std::move(body));
   }
@@ -228,14 +185,8 @@ namespace rattle::parser {
   static auto if_stmt(State &state, lexer::Token const &kwd) {
     auto condition = parse_expression(state);
     auto ctx = state.with(State::IGNORE_NLCOM);
+    auto if_block = parse_statement(state);
     auto token = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (token.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, token);
-    } else {
-      state.unget(token);
-    }
-    token = state.get();
     std::unique_ptr<nodes::Else> else_block;
     if (token.kind == lexer::Token::Kind::Else) {
       else_block = else_stmt(state, token);
@@ -243,29 +194,22 @@ namespace rattle::parser {
       state.unget(token);
     }
     return std::make_unique<nodes::If>(kwd, std::move(condition),
-                                       std::move(body), std::move(else_block));
+                                       std::move(if_block), std::move(else_block));
   }
 
   static auto class_stmt(State &state, lexer::Token const &klass) {
     auto ctx = state.with(State::IGNORE_NLCOM);
     auto cls_decl = non_brace_expr(state);
-    auto brace = state.get();
-    std::unique_ptr<nodes::Block> body;
-    if (brace.kind == lexer::Token::Kind::OpenBrace) {
-      body = block_stmt(state, brace);
-    } else {
-      state.unget(brace);
-    }
+    auto body = parse_statement(state);
     return std::make_unique<nodes::Class>(klass, std::move(cls_decl),
                                           std::move(body));
   }
 
   std::unique_ptr<nodes::Fn> fn_expression(State &state,
                                            lexer::Token const &fn) {
-    auto ctx = state.with(State::IGNORE_NLCOM);
     auto decl = non_brace_expr(state);
     auto token = state.get();
-    std::unique_ptr<nodes::Block> body;
+    std::unique_ptr<nodes::Statement> body;
     if (token.kind == lexer::Token::Kind::OpenBrace) {
       body = block_stmt(state, token);
     } else {

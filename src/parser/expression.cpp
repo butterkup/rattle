@@ -102,7 +102,6 @@ namespace rattle::parser {
       expression = parser.unary_parser(state, parser.unary_prec, token);
     } else {
       state.unget(token);
-      return expression;
     }
     while (true) {
       token = state.get();

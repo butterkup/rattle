@@ -4,7 +4,6 @@
 #include "category.hpp"
 #include "lexer.hpp"
 #include <memory>
-#include <optional>
 #include <vector>
 #endif
 
@@ -93,36 +92,37 @@ namespace rattle::parser::nodes {
   };
 
   struct Else: Statement {
-    std::unique_ptr<Block> body;
-    Else(lexer::Token const &kwd, std::unique_ptr<Block> body)
+    std::unique_ptr<Statement> body;
+    Else(lexer::Token const &kwd, std::unique_ptr<Statement> body)
       : Statement(kwd), body(std::move(body)) {}
     _visit;
   };
 
   struct Lastly: Statement {
-    std::unique_ptr<Block> body;
-    Lastly(lexer::Token const &kwd, std::unique_ptr<Block> body)
+    std::unique_ptr<Statement> body;
+    Lastly(lexer::Token const &kwd, std::unique_ptr<Statement> body)
       : Statement(kwd), body(std::move(body)) {}
     _visit;
   };
 
   struct Except: Statement {
     std::unique_ptr<Expression> captured;
-    std::unique_ptr<Block> body;
+    std::unique_ptr<Statement> body;
     Except(lexer::Token const &kwd, std::unique_ptr<Expression> captured,
-           std::unique_ptr<Block> body)
+           std::unique_ptr<Statement> body)
       : Statement(kwd), captured(std::move(captured)), body(std::move(body)) {}
     _visit;
   };
 
   struct Try: Statement {
-    std::unique_ptr<Block> body_try;
+    std::unique_ptr<Statement> body_try;
     std::vector<std::unique_ptr<Except>> handlers;
     std::unique_ptr<Else> block_else;
     std::unique_ptr<Lastly> block_lastly;
-    Try(lexer::Token const &kwd, std::vector<std::unique_ptr<Except>> handlers,
+    Try(lexer::Token const &kwd, std::unique_ptr<Statement> body_try, std::vector<std::unique_ptr<Except>> handlers,
         std::unique_ptr<Else> block_else, std::unique_ptr<Lastly> block_lastly)
-      : Statement(kwd), handlers(std::move(handlers)),
+      : Statement(kwd), body_try(std::move(body_try)),
+        handlers(std::move(handlers)),
         block_else(std::move(block_else)),
         block_lastly(std::move(block_lastly)) {}
     _visit;
@@ -137,18 +137,18 @@ namespace rattle::parser::nodes {
 
   struct Class: Statement {
     std::unique_ptr<Expression> decl;
-    std::unique_ptr<Block> body;
+    std::unique_ptr<Statement> body;
     Class(lexer::Token const &kwd, std::unique_ptr<Expression> decl,
-          std::unique_ptr<Block> body)
+          std::unique_ptr<Statement> body)
       : Statement(kwd), decl(std::move(decl)), body(std::move(body)) {}
     _visit;
   };
 
   struct Fn: Expression {
     std::unique_ptr<Expression> decl;
-    std::unique_ptr<Block> body;
+    std::unique_ptr<Statement> body;
     Fn(lexer::Token const &kwd, std::unique_ptr<Expression> decl,
-       std::unique_ptr<Block> body)
+       std::unique_ptr<Statement> body)
       : Expression(kwd), decl(std::move(decl)), body(std::move(body)) {}
     _visit;
   };
@@ -172,10 +172,10 @@ namespace rattle::parser::nodes {
 
   struct If: Statement {
     std::unique_ptr<Expression> condition;
-    std::unique_ptr<Block> block_if;
+    std::unique_ptr<Statement> block_if;
     std::unique_ptr<Else> block_else;
     If(lexer::Token const &kwd, std::unique_ptr<Expression> cond,
-       std::unique_ptr<Block> block_if, std::unique_ptr<Else> block_else)
+       std::unique_ptr<Statement> block_if, std::unique_ptr<Else> block_else)
       : Statement(kwd), condition(std::move(cond)),
         block_if(std::move(block_if)), block_else(std::move(block_else)) {}
     _visit;
@@ -183,18 +183,18 @@ namespace rattle::parser::nodes {
 
   struct While: Statement {
     std::unique_ptr<Expression> condition;
-    std::unique_ptr<Block> body;
+    std::unique_ptr<Statement> body;
     While(lexer::Token const &kwd, std::unique_ptr<Expression> cond,
-          std::unique_ptr<Block> body)
+          std::unique_ptr<Statement> body)
       : Statement(kwd), condition(std::move(cond)), body(std::move(body)) {}
     _visit;
   };
 
   struct For: Statement {
     std::unique_ptr<Expression> bindings;
-    std::unique_ptr<Block> body;
+    std::unique_ptr<Statement> body;
     For(lexer::Token const &kwd, std::unique_ptr<Expression> bindings,
-        std::unique_ptr<Block> body)
+        std::unique_ptr<Statement> body)
       : Statement(kwd), bindings(std::move(bindings)), body(std::move(body)) {}
     _visit;
   };
@@ -208,9 +208,9 @@ namespace rattle::parser::nodes {
 
   struct With: Statement {
     std::unique_ptr<Expression> contexts;
-    std::unique_ptr<Block> block;
+    std::unique_ptr<Statement> block;
     With(lexer::Token const &kwd, std::unique_ptr<Expression> ctx,
-         std::unique_ptr<Block> block)
+         std::unique_ptr<Statement> block)
       : Statement(kwd), contexts(std::move(ctx)), block(std::move(block)) {}
     _visit;
   };
