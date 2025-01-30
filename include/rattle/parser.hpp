@@ -136,7 +136,6 @@ namespace rattle {
     Parser &operator=(Parser const &parser);
 
     std::vector<std::unique_ptr<parser::nodes::Statement>> parse();
-    Lexer reset(Lexer lexer_ = Lexer());
   };
 } // namespace rattle
 

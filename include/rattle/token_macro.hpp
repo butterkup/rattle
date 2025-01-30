@@ -81,13 +81,10 @@
  TK_MACRO(Subscript, "")
 #endif
 
-#if TK_INCLUDE & TK_PRIUNARY
-  TK_MACRO(Container, "")
-#endif
-
 #if TK_INCLUDE & TK_PRIMARY
  TK_MACRO(Identifier, "")
  TK_MACRO(String, "")
+ TK_MACRO(LongString, "")
 # if TK_INCLUDE & TK_PRINUMBER
   TK_MACRO(Number, "")
 # else
@@ -188,15 +185,6 @@
   TK_MACRO(OpenBracket, "[")
   TK_MACRO(CloseBracket, "]")
 # endif
-#endif
-
-#if TK_INCLUDE & TK_CONTAINERS
- TK_MACRO(None, "")
- TK_MACRO(Error, "")
- TK_MACRO(Dict, "")
- TK_MACRO(List, "")
- TK_MACRO(Tuple, "")
- TK_MACRO(Group, "")
 #endif
 
 #undef TK_INCLUDE

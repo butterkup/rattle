@@ -3,7 +3,8 @@ INC_DIR=$(CUR_DIR)/include
 SRC_DIR=$(CUR_DIR)/src
 LIB_DIR=$(CUR_DIR)/lib
 LIBRARY=$(LIB_DIR)/librattle.so
-PROGRAM=rattle
+DEPMK=$(CUR_DIR)/ignore.deps.mk
+PROGRAM=$(CUR_DIR)/rattle
 
 CXX=clang++
 CXXFLAGS=-std=c++20 -fPIC -Wall -I$(INC_DIR)
@@ -14,15 +15,17 @@ else
 	CXXFLAGS+=-g
 endif
 
-SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f)
+SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f) $(PROGRAM).cpp
 HEADERS=$(shell find $(INC_DIR) -name '*.hpp' -type f)
+DEPS=$(subst .cpp,.cpp.d,$(SOURCES))
 OBJECTS=$(subst .cpp,.o,$(SOURCES))
-PREPROCESSED=$(subst .hpp,.ii,$(HEADERS))
-PREPROCESSED+=$(subst .cpp,.ii,$(SOURCES))
-TO_CLEAN=$(OBJECTS) $(PROGRAM) $(PROGRAM).o $(LIBRARY) $(PREPROCESSED)
+PREPROCESS=$(subst .hpp,.hpp.ii,$(HEADERS))
+PREPROCESS+=$(subst .cpp,.cpp.ii,$(SOURCES))
 STAT_TARGETS=$(HEADERS) $(SOURCES)
 
 all: $(PROGRAM)
+
+include $(DEPMK)
 
 stat:
 	@stats=("File Lines Words Bytes"); \
@@ -32,7 +35,16 @@ stat:
 	IFS=$$'\n'; column -t <<<$${stats[*]}
 
 .PHONY+=process
-process: $(PREPROCESSED)
+preprocess: $(PREPROCESS)
+
+$(DEPMK): $(DEPS)
+	@for file in $(DEPS); do \
+		echo >>$@ "include $$file"; \
+	done
+
+.PHONY+=deps
+deps: $(DEPMK)
+	@echo Creating DependencyMK: '$(DEPMK)'
 
 $(PROGRAM): $(PROGRAM).o $(LIBRARY)
 	$(CXX) $(CXXFLAGS) $(DEFS) -o $@ $< -L$(LIB_DIR) -Wl,-rpath=$(LIB_DIR) -lrattle
@@ -46,15 +58,37 @@ define preprocess_recipe
 	$(CXX) $(CXXFLAGS) -DRATTLE_SOURCE_ONLY -E -o $@ $<
 endef
 
-%.ii: %.hpp
+%.hpp.ii: %.hpp
 	$(preprocess_recipe)
 
-%.ii: %.cpp
+%.cpp.ii: %.cpp
 	$(preprocess_recipe)
+
+%.cpp.d: %.cpp
+	@echo -n "$$(dirname '$<')/" >$@
+	$(CXX) $(CXXFLAGS) -M $< >>$@
+
+.PHONY+=clean_objects
+clean_objects:
+	@echo Removing ObjectFiles
+	@rm -rfv $(OBJECTS)
+
+.PHONY+=clean_preprocess
+clean_preprocess:
+	@echo Removing PreprocessorFiles
+	@rm -rfv $(PREPROCESS)
+
+.PHONY+=clean_$(PROGRAM)
+clean_program:
+	@echo Removing Exec\&Lib
+	@rm -rfv $(PROGRAM) $(PROGRAM).o $(LIBRARY)
+	@if [ -e "$(LIB_DIR)" ]; then rmdir --ignore-fail-on-non-empty "$(LIB_DIR)"; fi;
 
 .PHONY+=clean
-clean:
-	@echo CleaningUp
-	@rm -rfv $(TO_CLEAN)
-	@if [ -e "$(LIB_DIR)" ]; then rmdir --ignore-fail-on-non-empty "$(LIB_DIR)"; fi;
+clean: clean_objects clean_program clean_preprocess
+
+.PHONY+=clean_all
+clean_all: clean
+	@echo Removing DependencyMakefiles
+	@rm -rfv $(DEPS) $(DEPMK)
 

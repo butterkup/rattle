@@ -1,19 +1,17 @@
-#include <algorithm>
-#include <cassert>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
+#ifndef RATTLE_SOURCE_ONLY
+# include <algorithm>
+# include <cassert>
+# include <filesystem>
+# include <fstream>
+# include <iostream>
+# include <span>
+#endif
+
 #include <rattle/analyzer.hpp>
 #include <rattle/lexer.hpp>
 #include <rattle/parser.hpp>
-#include <span>
 
 namespace fs = std::filesystem;
-
-template <bool procloc = false> struct PrintableToken {
-  rattle::lexer::Token const &token;
-  std::string const &content;
-};
 
 std::ostream &operator<<(std::ostream &out,
                          rattle::lexer::Location const &loc) {
@@ -21,16 +19,9 @@ std::ostream &operator<<(std::ostream &out,
              << ", o=" << loc.offset << ')';
 }
 
-std::ostream &operator<<(std::ostream &out,
-                         rattle::lexer::__detail::proc_loc const &p) {
-  return out << '(' << p.start << ", " << p.end << ", " << (p.end - p.start)
-             << ')';
-}
-
-template <bool procloc>
-std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
+std::ostream &operator<<(std::ostream &out, rattle::lexer::Token const &p) {
   std::string_view content;
-  switch (p.token.kind) {
+  switch (p.kind) {
   case rattle::lexer::Token::Kind::Newline:
     content = ";";
     break;
@@ -38,13 +29,11 @@ std::ostream &operator<<(std::ostream &out, PrintableToken<procloc> const &p) {
     content = "";
     break;
   default:
-    content = rattle::lexer::token_content(
-      p.content, procloc ? p.token.proc.start : p.token.start.offset,
-      procloc ? p.token.proc.end : p.token.end.offset);
+    content = p.payload();
   }
-  return out << "Token(" << rattle::lexer::to_string(p.token.kind)
-             << ", \x1b[32m" << content << "\x1b[0m, start=" << p.token.start
-             << ", end=" << p.token.end << ", .proc=" << p.token.proc << ')';
+  return out << "Token(" << rattle::lexer::to_string(p.kind)
+             << ", \x1b[32m" << content << "\x1b[0m, start=" << p.start
+             << ", end=" << p.end << ')';
 }
 
 void _lex_file(std::string content, std::string const &file) {
@@ -54,10 +43,7 @@ void _lex_file(std::string content, std::string const &file) {
 #endif
   for (;;) {
     rattle::lexer::Token token = lexer.scan();
-    std::cout << PrintableToken(token, content) << '\n';
-#ifdef SHOW_PROC_TK
-    std::cout << PrintableToken<true>(token, pstr) << '\n';
-#endif
+    std::cout << token << '\n';
     if (token.kind == rattle::lexer::Token::Kind::Eot) {
       break;
     }
@@ -65,8 +51,7 @@ void _lex_file(std::string content, std::string const &file) {
   for (auto &error : lexer.errors) {
     std::cerr << file << ": Error(\x1b[31m" << to_string(error.type)
               << "\x1b[0m, \x1b[91;1m"
-              << rattle::lexer::token_content(content, error.start.offset,
-                                              error.end.offset)
+              << error.payload()
               << "\x1b[0m, " << error.start << ", " << error.end << ")\n";
   }
 }

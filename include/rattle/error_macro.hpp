@@ -49,6 +49,12 @@ ERROR_MACRO(unterminated_if_else_expr)
 ERROR_MACRO(incomplete_operator_notin)
 #endif
 
+#if ERROR_INCLUDE & ANALYZER_ERROR
+ERROR_MACRO(expected_single_colon_expr)
+ERROR_MACRO(missing_left_operand)
+ERROR_MACRO(missing_right_operand)
+#endif
+
 #undef ERROR_INCLUDE
 #undef ERROR_MACRO
 // clang-format on

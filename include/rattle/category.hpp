@@ -2,6 +2,7 @@
 // clang-format off
 #define LEXER_ERROR                        0x00001
 #define PARSER_ERROR                       0x00002
+#define ANALYZER_ERROR                     0x00004
 
 #define TK_KEYUNARY                        0x00001
 #define TK_KEYBINARY                       0x00002
@@ -20,7 +21,6 @@
 #define TK_BASE_NODES                      0x04000
 #define TK_PRIUNARY                        0x08000
 #define TK_EXTR_NODES                      0x10000
-#define TK_CONTAINERS                      0x20000
 
 #define TK_EXPR_NODES (TK_OPALL | TK_KEYUNARY | TK_KEYLITERAL | TK_PRIUNARY | TK_PRIBINARY  | TK_KEYBINARY | TK_PRINUMBER | TK_PRIMARY)
 #define TK_ALL        ~(TK_CONTAINERS | TK_PRINUMBER | TK_PRIBINARY | TK_PRIUNARY | TK_SINGLE | TK_BASE_NODES | TK_EXTR_NODES)

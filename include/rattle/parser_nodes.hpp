@@ -273,7 +273,7 @@ namespace rattle::parser::nodes {
     _visit;                                                                    \
   }
 
-#define INH_BINARY_visit(_Name)                                                \
+#define INH_BINARY(_Name)                                                \
   struct _Name: BinaryExpr {                                                   \
     _Name(lexer::Token const &op, std::unique_ptr<Expression> left,            \
           std::unique_ptr<Expression> right)                                   \
@@ -281,14 +281,14 @@ namespace rattle::parser::nodes {
     _visit;                                                                    \
   }
 
-#define INH_UNARY_visit(_Name)                                                 \
+#define INH_UNARY(_Name)                                                 \
   struct _Name: UnaryExpr {                                                    \
     _Name(lexer::Token const &op, std::unique_ptr<Expression> operand)         \
       : UnaryExpr(op, std::move(operand)) {}                                   \
     _visit;                                                                    \
   }
 
-#define INH_LITERAL_visit(_Name)                                               \
+#define INH_LITERAL(_Name)                                                \
   struct _Name: Expression {                                                   \
     _Name(lexer::Token const &op): Expression(op) {}                           \
     _visit;                                                                    \
@@ -298,19 +298,19 @@ namespace rattle::parser::nodes {
 #define TK_INCLUDE TK_ASSIGN
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_LITERAL_visit(Name);
+#define TK_MACRO(Name, _) INH_LITERAL(Name);
 #define TK_INCLUDE (TK_PRINUMBER | TK_PRIMARY | TK_KEYLITERAL)
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_BINARY_visit(Name);
+#define TK_MACRO(Name, _) INH_BINARY(Name);
 #define TK_INCLUDE TK_PRIBINARY
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_BINARY_visit(Name);
+#define TK_MACRO(Name, _) INH_BINARY(Name);
 #define TK_INCLUDE (TK_KEYBINARY | TK_OPALL)
 #include "token_macro.hpp"
 
-#define TK_MACRO(Name, _) INH_UNARY_visit(Name);
+#define TK_MACRO(Name, _) INH_UNARY(Name);
 #define TK_INCLUDE TK_KEYUNARY
 #include "token_macro.hpp"
 

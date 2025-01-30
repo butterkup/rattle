@@ -2,9 +2,6 @@
 #include <rattle/lexer.hpp>
 
 namespace rattle::lexer {
-  static char hex2ch(char hex) {
-    return hex - (hex >= 'a' ? 87 : (hex >= 'A' ? 55 : 48));
-  }
   static void consume_string_escape(State &state, Token::Kind &kind) {
     using Kind = Token::Kind;
     if (not state.safe(2)) {
@@ -14,24 +11,19 @@ namespace rattle::lexer {
     }
     // clang-format off
     switch (state.peek(1)) {
-      case '\\':state.advance(); state.advance_erase();                  break;
-      case '\n':state.advance_erase(); state.advance_erase();            break;
-      case 'n': state.advance_erase(); state.advance_replace('\n');      break;
-      case 't': state.advance_erase(); state.advance_replace('\t');      break;
-      case 'r': state.advance_erase(); state.advance_replace('\r');      break;
-      case 'f': state.advance_erase(); state.advance_replace('\f');      break;
-      case 'v': state.advance_erase(); state.advance_replace('\v');      break;
+      case '\\': state.advance(); break;
+      case '\n': state.advance(); break;
+      case 'n':  state.advance(); break;
+      case 't':  state.advance(); break;
+      case 'r':  state.advance(); break;
+      case 'f':  state.advance(); break;
+      case 'v':  state.advance(); break;
       case '\'':
-      case '"': state.advance_erase(); state.advance();                  break;
+      case '"':  state.advance(); break;
       case 'X':
       case 'x':
         if (state.safe(4)) {
-          if (ishex(state.peek(2)) and ishex(state.peek(3))) {
-            char value = (hex2ch(state.peek(2)) << 4) | hex2ch(state.peek(3));
-            state.advance_erase(); state.advance_erase();
-            state.advance_erase();
-            state.advance_replace(value);
-          } else {
+          if (not(ishex(state.peek(2)) and ishex(state.peek(3)))) {
             kind = Kind::Error;
             auto loc = state.current_location();
             state.advance(); state.advance();
@@ -59,13 +51,25 @@ namespace rattle::lexer {
     char quote = state.advance();
     bool terminated = false;
     while (not state.empty()) {
-      if (state.peek() == quote) {
-        state.advance();
-        terminated = true;
-        break;
-      } else if (not multiline and state.peek() == '\n') {
-        return state.make_token(error_t::unterminated_single_line_string);
-      } else if (state.peek() == '\\') {
+      if constexpr (multiline) {
+        if (state.safe(3) and state.peek() == quote and
+            state.peek(1) == quote and state.peek(2) == quote) {
+          state.advance();
+          state.advance();
+          state.advance();
+          terminated = true;
+        }
+      } else {
+        if (state.peek() == quote) {
+          state.advance();
+          terminated = true;
+          break;
+        }
+        if (state.peek() == '\n') {
+          return state.make_token(error_t::unterminated_single_line_string);
+        }
+      }
+      if (state.peek() == '\\') {
         consume_string_escape(state, kind);
       } else {
         state.advance();

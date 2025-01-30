@@ -30,7 +30,7 @@ namespace rattle::lexer {
             state.report(error_t::repeated_numeric_separator, loc);
             kind = Token::Kind::Error;
           } else if (pred(state.peek(1))) {
-            state.advance_erase();
+            state.advance();
           } else {
             state.advance();
             state.report(error_t::trailing_numeric_separator, loc);

@@ -45,8 +45,16 @@ namespace rattle {
       case '|':   return state.make_token(state.match_next('=') ? Kind::BitOrEqual: Kind::BitOr);
       case '~':   return state.make_token(state.match_next('=') ? Kind::InvertEqual: Kind::Invert);
       case '%':   return state.make_token(state.match_next('=') ? Kind::PercentEqual: Kind::Percent);
-      case '\'':  return lexer::consume_single_string(state);
-      case '"':   return lexer::consume_multi_string(state);
+      case '\'':
+      case '"': {
+        char const quote = state.peek();
+        if (state.safe(3) and state.peek() == quote and
+            state.peek(1) == quote and state.peek(2) == quote) {
+          state.advance(); state.advance();
+          return lexer::consume_multi_string(state);
+        }
+        return lexer::consume_single_string(state);
+      }
       case '!':
         return state.match_next('=') ?
             state.make_token(Kind::NotEqual) :
@@ -70,31 +78,5 @@ namespace rattle {
     }
     return state.make_token(Kind::Eot);
   }
-
-  std::string Lexer::reset(std::string input) {
-    std::swap(content, input);
-    errors.clear();
-    state.reset();
-    return input;
-  }
-
-  Lexer &Lexer::operator=(Lexer &&lexer) {
-    ::new (this) Lexer(std::move(lexer));
-    return *this;
-  }
-  Lexer &Lexer::operator=(Lexer const &lexer) {
-    ::new (this) Lexer(lexer);
-    return *this;
-  }
-  std::string const &Lexer::get_content() const { return content; }
-  Lexer::Lexer(): content(), state(content, errors), errors() {}
-  Lexer::Lexer(std::string _content)
-    : content(std::move(_content)), state(content, errors), errors() {}
-  Lexer::Lexer(Lexer const &lexer)
-    : content(lexer.content), state(content, errors, lexer.state),
-      errors(lexer.errors) {}
-  Lexer::Lexer(Lexer &&lexer)
-    : content(std::move(lexer.content)), state(content, errors, lexer.state),
-      errors(std::move(lexer.errors)) {}
 } // namespace rattle
 

@@ -147,10 +147,5 @@ namespace rattle::lexer {
       return "<UnknownLexerErrorT>";
     }
   }
-
-  std::string_view token_content(std::string const &content, std::size_t start,
-                                 std::size_t end) {
-    return {&(*(content.begin() + start)), end - start};
-  }
 } // namespace rattle::lexer
 
