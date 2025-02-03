@@ -285,13 +285,6 @@ namespace rattle::parser {
                            error_t::unterminated_bracket>(state, prec::_lowest,
                                                           token);
   }
-
-  _decl_unary(parse_brace) {
-    auto scope = state.enter_brace();
-    return parse_container<lexer::Token::Kind::CloseBrace,
-                           error_t::unterminated_brace>(state, prec::_lowest,
-                                                        token);
-  }
 #undef _decl_unary
 #undef _decl_binary
 } // namespace rattle::parser

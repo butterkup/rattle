@@ -1,7 +1,4 @@
 ignore.*
-*.ign
-__pycache__/
-.vscode/
 *.o
 *.ii
 *.so
