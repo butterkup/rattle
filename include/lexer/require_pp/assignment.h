@@ -1,8 +1,4 @@
-#include "ensure_defined.h"
+// All asignment operators
 
-TOKEN_MACRO(Equal, "=")
-TOKEN_MACRO(PlusEqual, "+=")
-TOKEN_MACRO(MinusEqual, "-=")
-TOKEN_MACRO(SlashEqual, "/=")
-TOKEN_MACRO(StarEqual, "*=")
+#include "bits/assignment_ops.h"
 

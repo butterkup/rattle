@@ -3,5 +3,4 @@
 # define TOKEN_MACRO(k, s)
 #endif
 
-// Ensures TOKEN_MACRO as it is needed by all other files in this
-// directory for preprocessing.
+// Ensures TOKEN_MACRO(kind, skind) macro function is defined
