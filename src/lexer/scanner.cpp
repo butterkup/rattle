@@ -1,82 +1,57 @@
-#include "lexer.hpp"
-#include <rattle/lexer.hpp>
+#include "utility.hpp"
+#include <lexer/lexer.hpp>
 
-namespace rattle {
-  using lexer::error_t, lexer::Token;
-
-  Token Lexer::scan() {
-    using Kind = Token::Kind;
-    while ((lexer::consume_space(state), not state.empty())) {
-      switch (state.peek()) {
+namespace rattle::lexer::internal {
+  token_t cursor_t::scan() {
+    while (not base.empty()) {
+      switch (base.peek()) {
       case '\\':
-        if (state.safe(2)) {
-          if (state.match_next('\n')) {
-            state.consume_lexeme();
+        if (base.safe(1)) {
+          if (base.match_next('\n')) {
+            base.consume_lexeme();
             break;
           } else {
-            state.advance();
-            state.advance();
-            return state.make_token(error_t::invalid_escape_sequence);
+            base.eat();
+            base.eat();
+            return base.make_token(error_kind_t::invalid_escape_sequence);
           }
         } else {
-          state.advance();
-          return state.make_token(error_t::unterminated_escape_sequence);
+          base.eat();
+          return base.make_token(error_kind_t::unterminated_escape_sequence);
         }
         // clang-format off
-      case '#':   return lexer::consume_comment(state);
-      case '\n':  return state.make_token((state.advance(), Kind::Newline));
-      case ';':   return state.make_token((state.advance(), Kind::Semicolon));
-      case '.':   return state.make_token((state.advance(), Kind::Dot));
-      case ',':   return state.make_token((state.advance(), Kind::Comma));
-      case ':':   return state.make_token((state.advance(), Kind::Colon));
-      case '(':   return state.make_token((state.advance(), Kind::OpenParen));
-      case ')':   return state.make_token((state.advance(), Kind::CloseParen));
-      case '{':   return state.make_token((state.advance(), Kind::OpenBrace));
-      case '}':   return state.make_token((state.advance(), Kind::CloseBrace));
-      case '[':   return state.make_token((state.advance(), Kind::OpenBracket));
-      case ']':   return state.make_token((state.advance(), Kind::CloseBracket));
-      case '@':   return state.make_token(state.match_next('=') ? Kind::AtEqual: Kind::At);
-      case '=':   return state.make_token(state.match_next('=') ? Kind::EqualEqual: Kind::Equal);
-      case '-':   return state.make_token(state.match_next('=') ? Kind::MinusEqual: Kind::Minus);
-      case '+':   return state.make_token(state.match_next('=') ? Kind::PlusEqual: Kind::Plus);
-      case '*':   return state.make_token(state.match_next('=') ? Kind::StarEqual: Kind::Star);
-      case '/':   return state.make_token(state.match_next('=') ? Kind::SlashEqual: Kind::Slash);
-      case '&':   return state.make_token(state.match_next('=') ? Kind::BitAndEqual: Kind::BitAnd);
-      case '|':   return state.make_token(state.match_next('=') ? Kind::BitOrEqual: Kind::BitOr);
-      case '~':   return state.make_token(state.match_next('=') ? Kind::InvertEqual: Kind::Invert);
-      case '%':   return state.make_token(state.match_next('=') ? Kind::PercentEqual: Kind::Percent);
+      case '#':   return consume_comment();
+      case '\n':  return base.make_token((base.eat(), token_kind_t::Newline));
+      case ';':   return base.make_token((base.eat(), token_kind_t::Semicolon));
+      case '.':   return base.make_token((base.eat(), token_kind_t::Dot));
+      case ',':   return base.make_token((base.eat(), token_kind_t::Comma));
+      case '(':   return base.make_token((base.eat(), token_kind_t::OpenParen));
+      case ')':   return base.make_token((base.eat(), token_kind_t::CloseParen));
+      case '{':   return base.make_token((base.eat(), token_kind_t::OpenBrace));
+      case '}':   return base.make_token((base.eat(), token_kind_t::CloseBrace));
+      case '[':   return base.make_token((base.eat(), token_kind_t::OpenBracket));
+      case ']':   return base.make_token((base.eat(), token_kind_t::CloseBracket));
+      case '=':   return base.make_token(base.match_next('=') ? token_kind_t::EqualEqual: token_kind_t::Equal);
+      case '-':   return base.make_token(base.match_next('=') ? token_kind_t::MinusEqual: token_kind_t::Minus);
+      case '+':   return base.make_token(base.match_next('=') ? token_kind_t::PlusEqual: token_kind_t::Plus);
+      case '*':   return base.make_token(base.match_next('=') ? token_kind_t::StarEqual: token_kind_t::Star);
+      case '/':   return base.make_token(base.match_next('=') ? token_kind_t::SlashEqual: token_kind_t::Slash);
       case '\'':
-      case '"': {
-        char const quote = state.peek();
-        if (state.safe(3) and state.peek() == quote and
-            state.peek(1) == quote and state.peek(2) == quote) {
-          state.advance(); state.advance();
-          return lexer::consume_multi_string(state);
-        }
-        return lexer::consume_single_string(state);
-      }
+      case '"':   return consume_string();
       case '!':
-        return state.match_next('=') ?
-            state.make_token(Kind::NotEqual) :
-            state.make_token(error_t::incomplete_not_equal_operator);
-      case '<':
-        return state.make_token(
-          state.match_next('<') ?
-            (state.match_next('=') ? Kind::LshiftEqual : Kind::Lshift) :
-            (state.match_next('=') ? Kind::LessEqual : Kind::Less));
-      case '>':
-        return state.make_token(
-          state.match_next('>') ?
-            (state.match_next('=') ? Kind::RshiftEqual : Kind::Rshift) :
-            (state.match_next('=') ? Kind::GreaterEqual : Kind::Greater));
+        return base.match_next('=') ?
+            base.make_token(token_kind_t::NotEqual) :
+            base.make_token(error_kind_t::incomplete_not_equal_operator);
+      case '<':   return base.make_token(base.match_next('=') ? token_kind_t::LessEqual : token_kind_t::LessThan);
+      case '>':   return base.make_token(base.match_next('=') ? token_kind_t::GreaterEqual : token_kind_t::GreaterThan);
       default:
-        if (lexer::isdec(state.peek())) return lexer::consume_number(state);
-        if (lexer::isalnum(state.peek())) return lexer::consume_identifier(state);
-        state.advance(); return state.make_token(error_t::unrecognized_character);
+        if (utility::is_whitespace(base.peek())) return consume_whitespace();
+        if (utility::is_decimal(base.peek())) return consume_number();
+        if (utility::is_identifier_start_char(base.peek())) return consume_identifier();
+        base.eat(); return base.make_token(error_kind_t::unrecognized_character);
         // clang-format on
       }
     }
-    return state.make_token(Kind::Eot);
+    return base.make_token(token_kind_t::Eot);
   }
-} // namespace rattle
-
+} // namespace rattle::lexer::internal

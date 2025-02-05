@@ -93,8 +93,7 @@ namespace rattle::lexer {
         report({error, start.location, current.location, get_lexeme()});
       }
       void report(error_kind_t error, state_t mark) {
-        report(
-          {error, mark.location, current.location, get_lexeme(mark)});
+        report({error, mark.location, current.location, get_lexeme(mark)});
       }
       // Flush lexeme, note: the current character is not yet consumed
       void consume_lexeme() { start = current; }
@@ -113,7 +112,7 @@ namespace rattle::lexer {
       // Get current point in the program
       state_t bookmark() const { return current; }
       // Consume a character appropriately.
-      void eat() {
+      char eat() {
         current.location.column++;
         if (*current.iterator == '\n') {
           current.location.line++;
@@ -124,7 +123,7 @@ namespace rattle::lexer {
           manager.cache_line({line_start, current.iterator});
           line_start = current.iterator;
         }
-        current.iterator++;
+        return *current.iterator++;
       }
       // Check how far ahead we can peek safely
       std::ptrdiff_t max_safe() const {
@@ -148,14 +147,14 @@ namespace rattle::lexer {
       }
       // Report and make an error token
       token_t make_token(error_kind_t kind) {
-        report({kind, start.location, current.location, get_lexeme()});
+        report(kind);
         return make_token(token_kind_t::Error);
       }
       // Consume while some predicate is true
       template <class predicate_t>
       std::size_t eat_while(predicate_t &&predicate) {
         std::size_t consumed = 0;
-        while (not empty() && predicate(peek())) {
+        while (not empty() and predicate(peek())) {
           consumed++;
           eat();
         }
@@ -169,10 +168,12 @@ namespace rattle::lexer {
     struct cursor_t {
       cursor_t(const std::string_view program, manager_t &manager)
         : base{program, manager} {}
+      // Scan the next token
       token_t scan();
 
     private:
       cursor_base_t base;
+      // They do as they say and wrap as a token
       token_t consume_whitespace();
       token_t consume_comment();
       token_t consume_string();
