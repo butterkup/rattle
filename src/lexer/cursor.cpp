@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include <cctype>
 #include <lexer/lexer.hpp>
+#include <ostream>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -74,6 +75,20 @@ namespace rattle::lexer::internal {
     default:
       return "(error_kind_t::Unknown)";
     }
+  }
+
+  std::ostream &operator<<(std::ostream &s, location_t const &loc) {
+    return s << "Loc{ line=" << loc.line << ", column=" << loc.column << " }";
+  }
+
+  std::ostream &operator<<(std::ostream &s, token_t const &tk) {
+    return s << "Token{ kind=" << to_string(tk.kind) << ", start=" << tk.start
+             << ", end=" << tk.end << ", payload='" << tk.lexeme << "' }";
+  }
+
+  std::ostream &operator<<(std::ostream &s, error_t const &err) {
+    return s << "Error{ kind=" << to_string(err.kind) << ", start=" << err.start
+             << ", end=" << err.end << ", payload='" << err.lexeme << "' }";
   }
 } // namespace rattle::lexer::internal
 

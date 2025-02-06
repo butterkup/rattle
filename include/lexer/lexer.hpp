@@ -27,10 +27,10 @@ namespace rattle::lexer {
   struct error_t {
     error_kind_t kind;
     location_t start, end;
-    const std::string_view lexeme;
+    std::string_view lexeme;
 
     error_t(error_kind_t kind, location_t start, location_t end,
-      const std::string_view lexeme)
+      std::string_view lexeme)
       : kind{kind}, start{start}, end{end}, lexeme{lexeme} {}
   };
 
@@ -48,11 +48,16 @@ namespace rattle::lexer {
   struct token_t {
     token_kind_t kind;
     location_t start, end;
-    const std::string_view lexeme;
+    std::string_view lexeme;
     token_t(token_kind_t kind, location_t start, location_t end,
-      const std::string_view lexeme)
+      std::string_view lexeme)
       : kind{kind}, start{start}, end{end}, lexeme{lexeme} {}
   };
+
+  // printer: token_t, error_t and location_t.
+  std::ostream &operator<<(std::ostream &, token_t const &);
+  std::ostream &operator<<(std::ostream &, error_t const &);
+  std::ostream &operator<<(std::ostream &, location_t const &);
 
   // No need to compute some things twice.
   // * Lines will be needed to report errors, why not cache them here.
@@ -172,6 +177,7 @@ namespace rattle::lexer {
       token_t scan();
 
     private:
+      // manages position in the program (aka actual/core cursor)
       cursor_base_t base;
       // They do as they say and wrap as a token
       token_t consume_whitespace();

@@ -1,140 +1,144 @@
-#include "lexer.hpp"
-#include <concepts>
-#include <rattle/lexer.hpp>
+#include "utility.hpp"
+#include <cctype>
+#include <lexer/lexer.hpp>
 
-namespace rattle::lexer {
-  static bool fltend(char ch) {
-    switch (ch) {
-    case 'e':
-    case 'E':
-      return true;
-    default:
-      return numend(ch);
-    }
-  }
-
-  template <error_t error, char separator, std::predicate<char> Predicate>
-  static std::size_t number_seq(State &state, Predicate const &pred,
-                                Token::Kind &kind,
-                                Predicate const &isatend = numend) {
-    std::size_t count = 0;
-    while (not state.empty()) {
-      if (pred(state.peek())) {
-        state.advance();
-        count++;
-      } else if (state.peek() == separator) {
-        auto loc = state.current_location();
-        if (state.safe(2)) {
-          if (state.peek(1) == separator) {
-            state.advance();
-            state.report(error_t::repeated_numeric_separator, loc);
-            kind = Token::Kind::Error;
-          } else if (pred(state.peek(1))) {
-            state.advance();
-          } else {
-            state.advance();
-            state.report(error_t::trailing_numeric_separator, loc);
-            kind = Token::Kind::Error;
+namespace rattle::lexer::internal {
+  namespace numbers {
+    // consumes a sequence digits as stated by the predicate
+    // also picking up separators but not counting them as digits
+    // in charge of reporting adjacent separators or trailing ones
+    template <char sep, class predicate_t>
+    std::size_t eat_number_sequence(
+      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+      std::size_t consumed{0};
+      auto mark = base.bookmark();
+      bool ensure_follows = false;
+      for (;;) {
+        std::size_t found = base.eat_while(predicate);
+        if (found == 0 or base.empty()) {
+          if (ensure_follows) {
+            base.report(error_kind_t::trailing_numeric_separator, mark);
+            kind = token_kind_t::Error;
           }
-        } else {
-          state.advance();
-          state.report(error_t::trailing_numeric_separator, loc);
-          kind = Token::Kind::Error;
+          break;
         }
-      } else if (isatend(state.peek())) {
-        break;
-      } else {
-        auto loc = state.current_location();
-        state.advance();
-        state.report(error, loc);
-        kind = Token::Kind::Error;
+        ensure_follows = false;
+        consumed += found;
+        mark = base.bookmark();
+        found = base.eat_while([](char ch) { return ch == sep; });
+        if (found > 0) {
+          ensure_follows = true;
+          if (found > 1) {
+            base.report(error_kind_t::repeated_numeric_separator, mark);
+            kind = token_kind_t::Error;
+          }
+        }
       }
+      return consumed;
     }
-    return count;
-  }
-
-  template <char separator> static Token consume_number_helper(State &state) {
-    Token::Kind kind = Token::Kind::Decimal;
-    if (state.peek() == '0') {
-      state.advance();
-      if (state.safe()) {
-        switch (state.peek()) {
-        case 'X':
-        case 'x':
-          state.advance();
-          kind = Token::Kind::Hexadecimal;
-          if (not number_seq<error_t::invalid_hex_character, separator>(
-                state, ishex, kind)) {
-            state.report(error_t::empty_hex_literal);
-            kind = Token::Kind::Error;
+    // how do we know we've consumed a whole sequence of digits as per the
+    // predicate? well, any character that is not alphabetic is a valid end
+    // of sequence marker, then we should consume slphabetic as part and
+    // report their consumption as errors affecting the whole number
+    // as malformed
+    // TODO: Naming leaves a lot to be desired
+    template <char sep, error_kind_t invalid, class predicate_t>
+    std::size_t eat_sequence_to_end(
+      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+      return eat_number_sequence<sep>(
+        base, kind, [ predicate, &base ](char ch) {
+          if (predicate(ch)) {
+            return true;
           }
-          return state.make_token(kind);
-        case 'O':
-        case 'o':
-          state.advance();
-          kind = Token::Kind::Octal;
-          if (not number_seq<error_t::invalid_oct_character, separator>(
-                state, isoct, kind)) {
-            state.report(error_t::empty_oct_literal);
-            kind = Token::Kind::Error;
+          if (std::isalpha(ch)) {
+            auto mark = base.bookmark();
+            base.eat();
+            base.report(invalid, mark);
+            return true;
           }
-          return state.make_token(kind);
-        case 'B':
+          return false;
+        });
+    }
+    // helper function to ensure that we consume at least one digit
+    // else report empty sequence, remember, separators are not counted
+    // TODO: Better name please!
+    template <char sep, error_kind_t empty, error_kind_t invalid,
+      class predicate_t>
+    std::size_t eat_non_empty_sequence(
+      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+      std::size_t const eaten =
+        eat_sequence_to_end<sep, invalid>(base, kind, predicate);
+      if (eaten == 0) {
+        base.report(empty);
+      }
+      return eaten;
+    }
+    // helper function to consume based numbers
+    // first consume the base marker, consume non empty
+    // sequence of digits of that base then make and return
+    // a token as per set value of kind
+    template <char sep, error_kind_t empty, error_kind_t invalid,
+      class predicate_t>
+    token_t make_number_token(
+      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+      base.eat();
+      eat_non_empty_sequence<sep, empty, invalid>(base, kind, predicate);
+      return base.make_token(kind);
+    }
+    // actual number lexer
+    template <char sep> token_t consume_number(cursor_base_t &base) {
+      char const first = base.peek();
+      base.eat();
+      token_kind_t kind = token_kind_t::Decimal;
+      if (base.empty()) {
+        return base.make_token(kind);
+      }
+      if (first == '0') {
+        switch (base.peek()) {
         case 'b':
-          state.advance();
-          kind = Token::Kind::Binary;
-          if (not number_seq<error_t::invalid_bin_character, separator>(
-                state, isbin, kind)) {
-            state.report(error_t::empty_bin_literal);
-            kind = Token::Kind::Error;
-          }
-          return state.make_token(kind);
+        case 'B':
+          return make_number_token<sep, error_kind_t::empty_bin_literal,
+            error_kind_t::invalid_bin_character>(
+            base, kind, utility::is_binary);
+        case 'o':
+        case 'O':
+          return make_number_token<sep, error_kind_t::empty_oct_literal,
+            error_kind_t::invalid_oct_character>(base, kind, utility::is_octal);
+        case 'x':
+        case 'X':
+          return make_number_token<sep, error_kind_t::empty_hex_literal,
+            error_kind_t::invalid_hex_character>(
+            base, kind, utility::is_hexadecimal);
         default:
-          if (number_seq<error_t::invalid_dec_character, separator>(
-                state, isdec, kind, fltend)) {
-            state.report(error_t::leading_zero_in_decimal);
-            kind = Token::Kind::Error;
+          if (eat_number_sequence<sep>(base, kind, utility::is_decimal) > 0) {
+            base.report(error_kind_t::leading_zero_in_decimal);
           }
         }
       }
+      eat_number_sequence<sep>(base, kind, utility::is_decimal);
+      if (base.match('.')) {
+        kind = token_kind_t::Float;
+        if (eat_number_sequence<sep>(base, kind, utility::is_decimal) == 0) {
+          base.report(error_kind_t::missing_fractinal_part);
+        }
+      }
+      if (base.match('e') or base.match('E')) {
+        base.eat();
+        kind = token_kind_t::Float;
+        base.match('+') or base.match('-');
+        if (eat_number_sequence<sep>(base, kind, utility::is_decimal) == 0) {
+          base.report(error_kind_t::missing_exponent);
+        }
+      }
+      eat_sequence_to_end<sep, error_kind_t::invalid_dec_character>(
+        base, kind, utility::is_decimal);
+      return base.make_token(kind);
     }
+  } // namespace numbers
 
-    number_seq<error_t::invalid_dec_character, separator>(state, isdec, kind,
-                                                          fltend);
-    if (not state.empty()) {
-      bool is_float = false;
-      if (state.peek() == '.') {
-        is_float = true;
-        auto loc = state.current_location();
-        state.advance();
-        if (not number_seq<error_t::invalid_dec_character, separator>(
-              state, isdec, kind, fltend)) {
-          state.report(error_t::dangling_decimal_point, loc);
-          kind = Token::Kind::Error;
-        }
-      }
-      if (state.safe() and (state.peek() == 'e' or state.peek() == 'E')) {
-        is_float = true;
-        auto loc = state.current_location();
-        state.advance();
-        if (state.safe() and (state.peek() == '+' or state.peek() == '-')) {
-          state.advance();
-        }
-        if (not number_seq<error_t::invalid_dec_character, separator>(
-              state, isdec, kind)) {
-          state.report(error_t::missing_exponent_after_e, loc);
-          kind = Token::Kind::Error;
-        }
-      }
-      if (is_float and kind != Token::Kind::Error) {
-        kind = Token::Kind::Floating;
-      }
-    }
-    return state.make_token(kind);
+  token_t cursor_t::consume_number() {
+    // delegate to the actual consumer passing a separator to it
+    return numbers::consume_number<'_'>(base);
   }
-
-  Token consume_number(State &state) {
-    return consume_number_helper<'_'>(state);
-  }
-} // namespace rattle::lexer
+} // namespace rattle::lexer::internal
 
