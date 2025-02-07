@@ -3,28 +3,37 @@
 # define ERROR_MACRO(e)
 #endif
 
-ERROR_MACRO(unrecognized_character)
-ERROR_MACRO(unterminated_escape_sequence)
-ERROR_MACRO(invalid_escape_sequence)
-ERROR_MACRO(incomplete_not_equal_operator)
-ERROR_MACRO(invalid_escape_hex_sequence)
-ERROR_MACRO(incomplete_escape_hex_sequence)
-ERROR_MACRO(unrecognized_escape_character)
+/* String related errors */
+ERROR_MACRO(partial_not_equal)
 ERROR_MACRO(unterminated_single_line_string)
 ERROR_MACRO(unterminated_multi_line_string)
-ERROR_MACRO(unterminated_escape_in_string)
+ERROR_MACRO(partial_string_escape)
+ERROR_MACRO(partial_string_hex_escape)
+ERROR_MACRO(invalid_escape_sequence)
+ERROR_MACRO(invalid_escape_hex_sequence)
+
+/* Number related errors */
+/* - separator errors */
 ERROR_MACRO(repeated_numeric_separator)
 ERROR_MACRO(trailing_numeric_separator)
+/* - float errors */
 ERROR_MACRO(dangling_decimal_point)
 ERROR_MACRO(missing_exponent)
-ERROR_MACRO(missing_fractinal_part)
+/* - invalid character errors */
 ERROR_MACRO(leading_zero_in_decimal)
 ERROR_MACRO(invalid_hex_character)
 ERROR_MACRO(invalid_oct_character)
 ERROR_MACRO(invalid_dec_character)
 ERROR_MACRO(invalid_bin_character)
+/* - empty literals */
 ERROR_MACRO(empty_hex_literal)
 ERROR_MACRO(empty_oct_literal)
 ERROR_MACRO(empty_bin_literal)
+
+/* Top level errors */
+ERROR_MACRO(partially_formed_crlf)
+ERROR_MACRO(partial_toplvl_escape)
+ERROR_MACRO(invalid_toplvl_escape_sequence)
+ERROR_MACRO(unrecognized_toplvl_character)
 
 #undef ERROR_MACRO

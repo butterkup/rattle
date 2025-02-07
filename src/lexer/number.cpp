@@ -119,11 +119,10 @@ namespace rattle::lexer::internal {
       if (base.match('.')) {
         kind = token_kind_t::Float;
         if (eat_number_sequence<sep>(base, kind, utility::is_decimal) == 0) {
-          base.report(error_kind_t::missing_fractinal_part);
+          base.report(error_kind_t::dangling_decimal_point);
         }
       }
       if (base.match('e') or base.match('E')) {
-        base.eat();
         kind = token_kind_t::Float;
         base.match('+') or base.match('-');
         if (eat_number_sequence<sep>(base, kind, utility::is_decimal) == 0) {

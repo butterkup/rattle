@@ -54,10 +54,20 @@ namespace rattle::lexer {
       : kind{kind}, start{start}, end{end}, lexeme{lexeme} {}
   };
 
-  // printer: token_t, error_t and location_t.
+  // Very useful for printing strings with control characters.
+  // Simply a type tag over which std::string_view printer to use:
+  // ours for escaping special characters (control, etc); the one provided
+  // by standard library, possible impl would be a wrapper over
+  // `std::ostream::write(ptr, len)`
+  struct escape_t {
+    std::string_view view;
+  };
+
+  // Printers: token_t error_t location_t escape_t
   std::ostream &operator<<(std::ostream &, token_t const &);
   std::ostream &operator<<(std::ostream &, error_t const &);
   std::ostream &operator<<(std::ostream &, location_t const &);
+  std::ostream &operator<<(std::ostream &, escape_t const &);
 
   // No need to compute some things twice.
   // * Lines will be needed to report errors, why not cache them here.
