@@ -7,5 +7,5 @@ namespace rattle::lexer::internal::utility {
   bool is_identifier_start_char(char);
   bool is_identifier_body_char(char);
   bool is_whitespace(char);
-} // namespace rattle::lexer::internal
+} // namespace rattle::lexer::internal::utility
 

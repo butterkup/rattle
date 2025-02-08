@@ -8,8 +8,8 @@ namespace rattle::lexer::internal {
     // also picking up separators but not counting them as digits
     // in charge of reporting adjacent separators or trailing ones
     template <char sep, class predicate_t>
-    std::size_t eat_number_sequence(
-      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+    static std::size_t eat_number_sequence(
+      cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
       std::size_t consumed{0};
       auto mark = base.bookmark();
       bool ensure_follows = false;
@@ -43,8 +43,8 @@ namespace rattle::lexer::internal {
     // as malformed
     // TODO: Naming leaves a lot to be desired
     template <char sep, error_kind_t invalid, class predicate_t>
-    std::size_t eat_sequence_to_end(
-      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+    static std::size_t eat_sequence_to_end(
+      cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
       return eat_number_sequence<sep>(
         base, kind, [ predicate, &base ](char ch) {
           if (predicate(ch)) {
@@ -64,8 +64,8 @@ namespace rattle::lexer::internal {
     // TODO: Better name please!
     template <char sep, error_kind_t empty, error_kind_t invalid,
       class predicate_t>
-    std::size_t eat_non_empty_sequence(
-      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+    static std::size_t eat_non_empty_sequence(
+      cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
       std::size_t const eaten =
         eat_sequence_to_end<sep, invalid>(base, kind, predicate);
       if (eaten == 0) {
@@ -79,14 +79,14 @@ namespace rattle::lexer::internal {
     // a token as per set value of kind
     template <char sep, error_kind_t empty, error_kind_t invalid,
       class predicate_t>
-    token_t make_number_token(
-      cursor_base_t &base, token_kind_t &kind, predicate_t &&predicate) {
+    static token_t make_number_token(
+      cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
       base.eat();
       eat_non_empty_sequence<sep, empty, invalid>(base, kind, predicate);
       return base.make_token(kind);
     }
     // actual number lexer
-    template <char sep> token_t consume_number(cursor_base_t &base) {
+    template <char sep> token_t consume_number(cursor_t &base) {
       char const first = base.peek();
       base.eat();
       token_kind_t kind = token_kind_t::Decimal;
@@ -135,7 +135,7 @@ namespace rattle::lexer::internal {
     }
   } // namespace numbers
 
-  token_t cursor_t::consume_number() {
+  token_t lexer_t::consume_number() {
     // delegate to the actual consumer passing a separator to it
     return numbers::consume_number<'_'>(base);
   }

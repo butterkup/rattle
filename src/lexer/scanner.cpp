@@ -2,7 +2,7 @@
 #include <lexer/lexer.hpp>
 
 namespace rattle::lexer::internal {
-  static void toplvl_escape(cursor_base_t &base) {
+  static void toplvl_escape(cursor_t &base) {
     base.eat(); // consume escaper: backslash
     if (base.safe()) {
       switch (base.peek()) {
@@ -26,7 +26,7 @@ namespace rattle::lexer::internal {
     base.consume_lexeme();
   }
 
-  token_t cursor_t::scan() {
+  token_t lexer_t::scan() {
     while (not base.empty()) {
       switch (base.peek()) {
         // clang-format off

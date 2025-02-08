@@ -4,7 +4,6 @@
 #endif
 
 /* String related errors */
-ERROR_MACRO(partial_not_equal)
 ERROR_MACRO(unterminated_single_line_string)
 ERROR_MACRO(unterminated_multi_line_string)
 ERROR_MACRO(partial_string_escape)
@@ -35,5 +34,6 @@ ERROR_MACRO(partially_formed_crlf)
 ERROR_MACRO(partial_toplvl_escape)
 ERROR_MACRO(invalid_toplvl_escape_sequence)
 ERROR_MACRO(unrecognized_toplvl_character)
+ERROR_MACRO(partial_not_equal)
 
 #undef ERROR_MACRO

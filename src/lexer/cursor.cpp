@@ -1,4 +1,5 @@
 #include "utility.hpp"
+#include <cassert>
 #include <cctype>
 #include <iomanip>
 #include <lexer/lexer.hpp>
@@ -35,7 +36,7 @@ namespace rattle::lexer {
     };
 
     // consume names; keywords and variable names.
-    token_t cursor_t::consume_identifier() {
+    token_t lexer_t::consume_identifier() {
       base.eat_while(utility::is_identifier_body_char);
       try {
         return base.make_token(keywords.at(base.get_lexeme()));
@@ -44,14 +45,29 @@ namespace rattle::lexer {
       }
     }
 
-    token_t cursor_t::consume_whitespace() {
+    token_t lexer_t::consume_whitespace() {
       base.eat_while(utility::is_whitespace);
       return base.make_token(token_kind_t::Whitespace);
     }
 
-    token_t cursor_t::consume_comment() {
+    token_t lexer_t::consume_comment() {
       base.eat_while([](char ch) { return ch != '\n'; });
       return base.make_token(token_kind_t::Pound);
+    }
+    char cursor_t::eat() {
+      assert(not empty());
+      current.location.column++;
+      if (*current.iterator == '\n') {
+        current.location.column = location_t::valid().column;
+        manager.cache_line(
+          current.location.line++, {line_start, current.iterator});
+        line_start = current.iterator + 1;
+      } else if (empty() and line_start != current.iterator) {
+        manager.cache_line(
+          current.location.line, {line_start, current.iterator});
+        line_start = current.iterator;
+      }
+      return *current.iterator++;
     }
   } // namespace internal
 

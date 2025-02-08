@@ -1,98 +1,107 @@
-#include "lexer.hpp"
-#include <rattle/lexer.hpp>
+#include "utility.hpp"
+#include <cassert>
+#include <lexer/lexer.hpp>
 
-namespace rattle::lexer {
-  static void consume_string_escape(State &state, Token::Kind &kind) {
-    using Kind = Token::Kind;
-    if (not state.safe(2)) {
-      kind = Kind::Error;
-      state.advance();
-      return state.report(error_t::unterminated_escape_in_string);
-    }
-    // clang-format off
-    switch (state.peek(1)) {
-      case '\\': state.advance(); break;
-      case '\n': state.advance(); break;
-      case 'n':  state.advance(); break;
-      case 't':  state.advance(); break;
-      case 'r':  state.advance(); break;
-      case 'f':  state.advance(); break;
-      case 'v':  state.advance(); break;
-      case '\'':
-      case '"':  state.advance(); break;
-      case 'X':
-      case 'x':
-        if (state.safe(4)) {
-          if (not(ishex(state.peek(2)) and ishex(state.peek(3)))) {
-            kind = Kind::Error;
-            auto loc = state.current_location();
-            state.advance(); state.advance();
-            if(ishex(state.peek())) state.advance();
-            state.report(error_t::invalid_escape_hex_sequence, loc);
-          }
-        } else {
-          kind = Kind::Error;
-          auto loc = state.current_location();
-          state.advance(); state.advance();
-          if(state.safe() and ishex(state.peek())) state.advance();
-          state.report(error_t::incomplete_escape_hex_sequence, loc);
-        }                                                                break;
-      default: {
-        auto loc = state.current_location();
-        state.advance(); state.advance();
-        state.report(error_t::unrecognized_escape_character, loc);
-      }
-    }
-    // clang-format on
-  }
-
-  template <bool multiline> static Token consume_string_helper(State &state) {
-    auto kind = Token::Kind::String;
-    char quote = state.advance();
-    bool terminated = false;
-    while (not state.empty()) {
-      if constexpr (multiline) {
-        if (state.safe(3) and state.peek() == quote and
-            state.peek(1) == quote and state.peek(2) == quote) {
-          state.advance();
-          state.advance();
-          state.advance();
-          terminated = true;
-        }
+namespace rattle::lexer::internal {
+  namespace strings {
+    // Handle in string escapes.
+    static void escape_sequence(cursor_t &base, token_kind_t &kind) {
+      auto mark = base.bookmark();
+      base.eat(); // Consume the escaper
+      if (base.empty()) {
+        kind = token_kind_t::Error;
+        base.report(error_kind_t::partial_string_escape, mark);
       } else {
-        if (state.peek() == quote) {
-          state.advance();
-          terminated = true;
+        switch (base.peek()) {
+        case '0': // Null
+        case 'n': // Newline
+        case 'v': // Vertical tab
+        case 'f': // Form feed
+        case 'r': // Carriage return
+        case 't': // Tab
+        case 'b': // Backspace
+        case 'a': // Alarm
+          base.eat();
           break;
+        case 'x':
+        case 'X':
+          if (base.safe(2)) {
+            if (not(utility::is_hexadecimal(base.peek(1)) and
+                    utility::is_hexadecimal(base.peek(2)))) {
+              kind = token_kind_t::Error;
+              base.report(error_kind_t::invalid_escape_hex_sequence, mark);
+            }
+            base.eat();
+            base.eat();
+          } else {
+            kind = token_kind_t::Error;
+            base.report(error_kind_t::partial_string_hex_escape, mark);
+          }
+          base.eat();
+          break;
+        default:
+          base.eat();
+          base.report(error_kind_t::invalid_escape_sequence);
         }
-        if (state.peek() == '\n') {
-          return state.make_token(error_t::unterminated_single_line_string);
-        }
-      }
-      if (state.peek() == '\\') {
-        consume_string_escape(state, kind);
-      } else {
-        state.advance();
       }
     }
-    if constexpr (multiline) {
-      if (not terminated) {
-        return state.make_token(error_t::unterminated_multi_line_string);
+    // Generic function to lex strings. Can handle multiline and single
+    // line string lexing and the compiler can evaluate some portions
+    // (expressions with multiline constant) of the function removing
+    // dead code and optimize for each listed variant.
+    template <bool multiline>
+    static token_kind_t consume_string_variant(cursor_t &base) {
+      const char quote = base.eat();
+      token_kind_t kind = token_kind_t::SingleLineString;
+      if constexpr (multiline) {
+        kind = token_kind_t::MultilineString;
+        base.eat();
+        base.eat();
       }
-    } else {
-      if (not terminated) {
-        return state.make_token(error_t::unterminated_single_line_string);
+      for (;;) {
+        base.eat_while([ quote ](char ch) {
+          return ch != quote or ch != '\\' or (not multiline and ch != '\n');
+        });
+        if (base.empty()) {
+          kind = token_kind_t::Error;
+          base.report(multiline ?
+                        error_kind_t::unterminated_multi_line_string :
+                        error_kind_t::unterminated_single_line_string);
+          return kind;
+        } else {
+          switch (base.peek()) {
+          case '\\':
+            escape_sequence(base, kind);
+            break;
+          case '\n':
+            if constexpr (not multiline) {
+              kind = token_kind_t::Error;
+              base.report(error_kind_t::unterminated_single_line_string);
+              return kind;
+            }
+            break;
+          default:
+            if (base.match(quote) and
+                (multiline and base.match(quote) and base.match(quote))) {
+              return kind;
+            }
+          }
+        }
       }
     }
-    return state.make_token(kind);
-  }
 
-  Token consume_multi_string(State &state) {
-    return consume_string_helper<true>(state);
-  }
+    // Determine which string variant to call and delegate lexing to it
+    // forming a token on the way out
+    static token_t consume_string(cursor_t &base) {
+      const char quote = base.peek();
+      return base.make_token(
+        base.safe(2) and base.peek(1) == quote and base.peek(2) == quote ?
+          consume_string_variant<true>(base) :
+          consume_string_variant<false>(base));
+    }
+  } // namespace strings
 
-  Token consume_single_string(State &state) {
-    return consume_string_helper<false>(state);
-  }
-} // namespace rattle::lexer
+  // A Facade; hides all the string lexing complexity from cursor_t
+  token_t lexer_t::consume_string() { return strings::consume_string(base); }
+} // namespace rattle::lexer::internal
 

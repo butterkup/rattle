@@ -1,13 +1,14 @@
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <string_view>
 
 namespace rattle::lexer {
   // Track location as we see it in editors
   struct location_t {
-    using type_t = unsigned int;
-    type_t line, column;
+    using type = unsigned int;
+    type line, column;
 
     bool is_null() const { return line == 0; }
     static constexpr location_t valid() { return {1, 0}; }
@@ -74,8 +75,10 @@ namespace rattle::lexer {
   // * The internal state of the lexer needn't care how errors flow
   //   in the system, only that it reports and goes on.
   struct manager_t {
-    virtual void report_error(error_t error) = 0;
-    virtual void cache_line(const std::string_view line) = 0;
+    enum class onerror { short_circuit, keep_going };
+    virtual onerror report_error(error_t) = 0;
+    virtual void cache_line(std::size_t, const std::string_view) = 0;
+    virtual ~manager_t() = default;
   };
 
   namespace internal {
@@ -86,14 +89,18 @@ namespace rattle::lexer {
     };
     // Cursor base, provides common operations while abstracting
     // low level iterator gymnastics
-    class cursor_base_t {
+    class cursor_t {
       const std::string_view program;
       state_t start, current;
       std::string_view::const_iterator line_start;
       manager_t &manager;
 
+      void flush_program() {
+        start.iterator = current.iterator = program.cend();
+      }
+
     public:
-      cursor_base_t(const std::string_view program, manager_t &manager)
+      cursor_t(const std::string_view program, manager_t &manager)
         : program{program}, start{location_t::valid(), program.cbegin()},
           current{location_t::valid(), program.cbegin()},
           line_start{program.cbegin()}, manager{manager} {}
@@ -101,14 +108,22 @@ namespace rattle::lexer {
       // Check if we are at the end of the program.
       bool empty() const { return current.iterator == program.cend(); }
       // Preconditions, nth char exists
-      char peek(std::ptrdiff_t n = 0) const { return *(current.iterator + n); }
+      char peek(std::ptrdiff_t n = 0) const {
+        assert(safe(n));
+        return *(current.iterator + n);
+      }
       // Report an error to the manager
-      void report(error_t error) { manager.report_error(error); }
+      void report(error_t error) {
+        if (manager.report_error(error) == manager_t::onerror::short_circuit) {
+          flush_program();
+        } /* else keep_going */
+      }
       void report(error_kind_t error) {
         report({error, start.location, current.location, get_lexeme()});
       }
       void report(error_kind_t error, state_t mark) {
-        report({error, mark.location, current.location, get_lexeme(mark)});
+        report({error, mark.location, current.location,
+          {mark.iterator, current.iterator}});
       }
       // Flush lexeme, note: the current character is not yet consumed
       void consume_lexeme() { start = current; }
@@ -120,29 +135,14 @@ namespace rattle::lexer {
       std::string_view get_lexeme() const {
         return {start.iterator, current.iterator};
       }
-      // Get lexeme from stamped point to current
-      std::string_view get_lexeme(state_t const mark) const {
-        return {mark.iterator, current.iterator};
-      }
       // Get current point in the program
       state_t bookmark() const { return current; }
-      // Consume a character appropriately.
-      char eat() {
-        current.location.column++;
-        if (*current.iterator == '\n') {
-          current.location.line++;
-          current.location.column = location_t::valid().column;
-          manager.cache_line({line_start, current.iterator});
-          line_start = current.iterator + 1;
-        } else if (empty() and line_start != current.iterator) {
-          manager.cache_line({line_start, current.iterator});
-          line_start = current.iterator;
-        }
-        return *current.iterator++;
-      }
+      // Consume a character appropriately. [UNSAFE]
+      // precondition: cursor has not reached end of file
+      char eat();
       // Check how far ahead we can peek safely
       std::ptrdiff_t max_safe() const {
-        return current.iterator - program.cend();
+        return program.cend() - current.iterator;
       }
       // Can we peek n characters ahead, default 0 which checks if current character
       // is safe to peek
@@ -180,15 +180,15 @@ namespace rattle::lexer {
     // It tracks two states, where a token starts and where we are
     // currently and notifies the manager on relevant events like
     // errors encountered and lines processed.
-    struct cursor_t {
-      cursor_t(const std::string_view program, manager_t &manager)
+    struct lexer_t {
+      lexer_t(std::string_view program, manager_t &manager)
         : base{program, manager} {}
       // Scan the next token
       token_t scan();
 
     private:
       // manages position in the program (aka actual/core cursor)
-      cursor_base_t base;
+      cursor_t base;
       // They do as they say and wrap as a token
       token_t consume_whitespace();
       token_t consume_comment();
@@ -201,11 +201,11 @@ namespace rattle::lexer {
   // A facade, simpler and hides the complexity by exposing a limited
   // API to its owner, afterall, they mainly expect `lexer.lex() -> token`
   struct lexer_t {
-    lexer_t(const std::string_view program, manager_t &manager)
-      : cursor{program, manager} {}
-    token_t lex() { return cursor.scan(); }
+    lexer_t(std::string_view program, manager_t &manager)
+      : lexer{program, manager} {}
+    token_t lex() { return lexer.scan(); }
 
   private:
-    internal::cursor_t cursor;
+    internal::lexer_t lexer;
   };
 } // namespace rattle::lexer
