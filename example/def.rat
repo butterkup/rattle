@@ -1,16 +1,17 @@
-fn hello(name) {
+def hello(name) {
   assert isinstance(name, str), name
   return "Hey %s?" % name.title()
 }
 
-fn sum(numbers) {
+def sum(numbers) {
   total = 0
-  for ( number in numbers )
+  for number in numbers {
     total += number
+  }
   return total
 }
 
-fn count(start, stop) {
+def count(start, stop) {
   # step = 1 if start <= stop else -1
   while start < stop {
     print("Current: value=%s" % start)
@@ -18,11 +19,11 @@ fn count(start, stop) {
   }
 }
 
-fn starmap(function, iterators) {
+def starmap(function, iterators) {
   for args in zip(iterators) {
     yield function(args)
   }
 }
 
-greeter = fn (name) { return "Hello %s, how was your day?" % name }
+greeter = def (name) { return "Hello %s, how was your day?" % name }
 

@@ -1,6 +1,7 @@
 #include "utility.hpp"
 #include <cassert>
 #include <lexer/lexer.hpp>
+#include <utility>
 
 namespace rattle::lexer::internal {
   namespace strings {
@@ -13,18 +14,20 @@ namespace rattle::lexer::internal {
         base.report(error_kind_t::partial_string_escape, mark);
       } else {
         switch (base.peek()) {
-        case '0': // Null
-        case 'n': // Newline
-        case 'v': // Vertical tab
-        case 'f': // Form feed
-        case 'r': // Carriage return
-        case 't': // Tab
-        case 'b': // Backspace
-        case 'a': // Alarm
+        case '0':  // Null
+        case 'n':  // Newline
+        case 'v':  // Vertical tab
+        case 'f':  // Form feed
+        case 'r':  // Carriage return
+        case 't':  // Tab
+        case 'b':  // Backspace
+        case 'a':  // Alarm
+        case '\'': // Single quote
+        case '"':  // Double quote
           base.eat();
           break;
         case 'x':
-        case 'X':
+        case 'X': // Hexadecimal escape: \xab \x23 \x10
           if (base.safe(2)) {
             if (not(utility::is_hexadecimal(base.peek(1)) and
                     utility::is_hexadecimal(base.peek(2)))) {
@@ -60,7 +63,8 @@ namespace rattle::lexer::internal {
       }
       for (;;) {
         base.eat_while([ quote ](char ch) {
-          return ch != quote or ch != '\\' or (not multiline and ch != '\n');
+          return multiline ? ch != quote and ch != '\\' :
+                             ch != quote and ch != '\\' and ch != '\n';
         });
         if (base.empty()) {
           kind = token_kind_t::Error;
@@ -74,16 +78,25 @@ namespace rattle::lexer::internal {
             escape_sequence(base, kind);
             break;
           case '\n':
-            if constexpr (not multiline) {
+            if constexpr (multiline) {
+              // should never hit this.
+              assert(false);
+            } else {
               kind = token_kind_t::Error;
               base.report(error_kind_t::unterminated_single_line_string);
               return kind;
             }
             break;
           default:
-            if (base.match(quote) and
-                (multiline and base.match(quote) and base.match(quote))) {
-              return kind;
+            if constexpr (multiline) {
+              if (base.match(quote) and base.match(quote) and
+                  base.match(quote)) {
+                return kind;
+              }
+            } else {
+              if (base.match(quote)) {
+                return kind;
+              }
             }
           }
         }

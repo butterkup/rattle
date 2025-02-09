@@ -13,8 +13,17 @@ namespace rattle::lexer::internal {
       std::size_t consumed{0};
       auto mark = base.bookmark();
       bool ensure_follows = false;
+      auto is_sep = [](char ch) { return ch == sep; };
+      std::size_t found = base.eat_while(is_sep);
+      if (found > 0) {
+        ensure_follows = true;
+        if (found > 1) {
+          base.report(error_kind_t::repeated_numeric_separator, mark);
+          kind = token_kind_t::Error;
+        }
+      }
       for (;;) {
-        std::size_t found = base.eat_while(predicate);
+        found = base.eat_while(predicate);
         if (found == 0 or base.empty()) {
           if (ensure_follows) {
             base.report(error_kind_t::trailing_numeric_separator, mark);
@@ -25,7 +34,7 @@ namespace rattle::lexer::internal {
         ensure_follows = false;
         consumed += found;
         mark = base.bookmark();
-        found = base.eat_while([](char ch) { return ch == sep; });
+        found = base.eat_while(is_sep);
         if (found > 0) {
           ensure_follows = true;
           if (found > 1) {
@@ -45,19 +54,12 @@ namespace rattle::lexer::internal {
     template <char sep, error_kind_t invalid, class predicate_t>
     static std::size_t eat_sequence_to_end(
       cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
-      return eat_number_sequence<sep>(
-        base, kind, [ predicate, &base ](char ch) {
-          if (predicate(ch)) {
-            return true;
-          }
-          if (std::isalpha(ch)) {
-            auto mark = base.bookmark();
-            base.eat();
-            base.report(invalid, mark);
-            return true;
-          }
-          return false;
-        });
+      std::size_t consumed = eat_number_sequence<sep>(base, kind, predicate);
+      auto mark = base.bookmark();
+      if (base.eat_while(std::isalpha) != 0) {
+        base.report(invalid, mark);
+      }
+      return consumed;
     }
     // helper function to ensure that we consume at least one digit
     // else report empty sequence, remember, separators are not counted
@@ -80,7 +82,7 @@ namespace rattle::lexer::internal {
     template <char sep, error_kind_t empty, error_kind_t invalid,
       class predicate_t>
     static token_t make_number_token(
-      cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
+      cursor_t &base, token_kind_t kind, predicate_t &&predicate) {
       base.eat();
       eat_non_empty_sequence<sep, empty, invalid>(base, kind, predicate);
       return base.make_token(kind);
@@ -99,16 +101,17 @@ namespace rattle::lexer::internal {
         case 'B':
           return make_number_token<sep, error_kind_t::empty_bin_literal,
             error_kind_t::invalid_bin_character>(
-            base, kind, utility::is_binary);
+            base, token_kind_t::Binary, utility::is_binary);
         case 'o':
         case 'O':
           return make_number_token<sep, error_kind_t::empty_oct_literal,
-            error_kind_t::invalid_oct_character>(base, kind, utility::is_octal);
+            error_kind_t::invalid_oct_character>(
+            base, token_kind_t::Octal, utility::is_octal);
         case 'x':
         case 'X':
           return make_number_token<sep, error_kind_t::empty_hex_literal,
             error_kind_t::invalid_hex_character>(
-            base, kind, utility::is_hexadecimal);
+            base, token_kind_t::Hexadecimal, utility::is_hexadecimal);
         default:
           if (eat_number_sequence<sep>(base, kind, utility::is_decimal) > 0) {
             base.report(error_kind_t::leading_zero_in_decimal);

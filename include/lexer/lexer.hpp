@@ -185,6 +185,7 @@ namespace rattle::lexer {
         : base{program, manager} {}
       // Scan the next token
       token_t scan();
+      bool empty() const { return base.empty(); }
 
     private:
       // manages position in the program (aka actual/core cursor)
@@ -204,6 +205,7 @@ namespace rattle::lexer {
     lexer_t(std::string_view program, manager_t &manager)
       : lexer{program, manager} {}
     token_t lex() { return lexer.scan(); }
+    bool empty() const { return lexer.empty(); }
 
   private:
     internal::lexer_t lexer;

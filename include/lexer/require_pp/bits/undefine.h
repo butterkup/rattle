@@ -6,4 +6,5 @@
 #undef rattle_numbers_h
 #undef rattle_strings_h
 #undef rattle_symbolic_ops_h
+#undef rattle_primary_h
 
