@@ -76,7 +76,7 @@ namespace rattle::lexer {
   //   in the system, only that it reports and goes on.
   struct manager_t {
     enum class onerror { short_circuit, keep_going };
-    virtual onerror report_error(error_t) = 0;
+    virtual onerror report(error_t) = 0;
     virtual void cache_line(std::size_t, const std::string_view) = 0;
     virtual ~manager_t() = default;
   };
@@ -114,7 +114,7 @@ namespace rattle::lexer {
       }
       // Report an error to the manager
       void report(error_t error) {
-        if (manager.report_error(error) == manager_t::onerror::short_circuit) {
+        if (manager.report(error) == manager_t::onerror::short_circuit) {
           flush_program();
         } /* else keep_going */
       }

@@ -1,6 +1,6 @@
 #include "utility.hpp"
 #include <cctype>
-#include <lexer/lexer.hpp>
+#include <rattle/lexer/lexer.hpp>
 
 namespace rattle::lexer::internal {
   namespace numbers {
@@ -47,7 +47,7 @@ namespace rattle::lexer::internal {
     }
     // how do we know we've consumed a whole sequence of digits as per the
     // predicate? well, any character that is not alphabetic is a valid end
-    // of sequence marker, then we should consume slphabetic as part and
+    // of sequence marker, then we should consume alphanumeric as part and
     // report their consumption as errors affecting the whole number
     // as malformed
     // TODO: Naming leaves a lot to be desired
@@ -56,7 +56,7 @@ namespace rattle::lexer::internal {
       cursor_t &base, token_kind_t &kind, predicate_t &&predicate) {
       std::size_t consumed = eat_number_sequence<sep>(base, kind, predicate);
       auto mark = base.bookmark();
-      if (base.eat_while(std::isalpha) != 0) {
+      if (base.eat_while(utility::is_identifier_body_char) != 0) {
         base.report(invalid, mark);
       }
       return consumed;

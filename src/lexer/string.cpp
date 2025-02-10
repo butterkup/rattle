@@ -1,7 +1,6 @@
 #include "utility.hpp"
 #include <cassert>
-#include <lexer/lexer.hpp>
-#include <utility>
+#include <rattle/lexer/lexer.hpp>
 
 namespace rattle::lexer::internal {
   namespace strings {
@@ -16,14 +15,15 @@ namespace rattle::lexer::internal {
         switch (base.peek()) {
         case '0':  // Null
         case 'n':  // Newline
+        case 'r':  // Carriage return
         case 'v':  // Vertical tab
         case 'f':  // Form feed
-        case 'r':  // Carriage return
         case 't':  // Tab
         case 'b':  // Backspace
         case 'a':  // Alarm
         case '\'': // Single quote
         case '"':  // Double quote
+        case '\\': // Backward slash
           base.eat();
           break;
         case 'x':

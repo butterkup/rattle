@@ -3,5 +3,4 @@ ignore.*
 *.ii
 *.so
 *.d
-.vscode
-rattle
+./rattle

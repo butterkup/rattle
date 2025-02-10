@@ -2,7 +2,7 @@
 #include <cassert>
 #include <cctype>
 #include <iomanip>
-#include <lexer/lexer.hpp>
+#include <rattle/lexer/lexer.hpp>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -31,8 +31,8 @@ namespace rattle::lexer {
     static std::unordered_map<std::string_view, token_kind_t> const keywords{
 #define rattle_undef_forget_token_macro
 #define TOKEN_MACRO(Kind, keyword) {keyword, token_kind_t::Kind},
-#include <lexer/require_pp/keywords.h>
-#include <lexer/require_pp/undefine.h>
+#include <rattle/lexer/require_pp/keywords.h>
+#include <rattle/lexer/require_pp/undefine.h>
     };
 
     // consume names; keywords and variable names.
@@ -77,7 +77,7 @@ namespace rattle::lexer {
 #define TOKEN_MACRO(Kind, _)                                                   \
   case token_kind_t::Kind:                                                     \
     return #Kind;
-#include <lexer/tokens_pp.h>
+#include <rattle/lexer/tokens_pp.h>
     default:
       return "(token_kind_t::Unknown)";
     }
@@ -88,7 +88,7 @@ namespace rattle::lexer {
 #define ERROR_MACRO(Kind)                                                      \
   case error_kind_t::Kind:                                                     \
     return #Kind;
-#include <lexer/errors_pp.h>
+#include <rattle/lexer/errors_pp.h>
     default:
       return "(error_kind_t::Unknown)";
     }

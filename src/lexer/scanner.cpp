@@ -1,5 +1,5 @@
 #include "utility.hpp"
-#include <lexer/lexer.hpp>
+#include <rattle/lexer/lexer.hpp>
 
 namespace rattle::lexer::internal {
   static void toplvl_escape(cursor_t &base) {
