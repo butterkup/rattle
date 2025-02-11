@@ -3,11 +3,11 @@
 #ifndef rattle_comparison_ops_h
 # define rattle_comparison_ops_h
 
-TOKEN_MACRO(EqualEqual, "==")
-TOKEN_MACRO(NotEqual, "!=")
-TOKEN_MACRO(LessEqual, "<=")
-TOKEN_MACRO(LessThan, "<")
-TOKEN_MACRO(GreaterEqual, ">=")
-TOKEN_MACRO(GreaterThan, ">")
+rattle_pp_token_macro(EqualEqual, "==")
+rattle_pp_token_macro(NotEqual, "!=")
+rattle_pp_token_macro(LessEqual, "<=")
+rattle_pp_token_macro(LessThan, "<")
+rattle_pp_token_macro(GreaterEqual, ">=")
+rattle_pp_token_macro(GreaterThan, ">")
 
 #endif

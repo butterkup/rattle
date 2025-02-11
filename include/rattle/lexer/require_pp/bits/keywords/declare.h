@@ -3,9 +3,9 @@
 #ifndef rattle_keyword_declare_h
 # define rattle_keyword_declare_h
 
-TOKEN_MACRO(Def, "def")
-TOKEN_MACRO(Class, "class")
-TOKEN_MACRO(Global, "global")
-TOKEN_MACRO(Nonlocal, "nonlocal")
+rattle_pp_token_macro(Def, "def")
+rattle_pp_token_macro(Class, "class")
+rattle_pp_token_macro(Global, "global")
+rattle_pp_token_macro(Nonlocal, "nonlocal")
 
 #endif

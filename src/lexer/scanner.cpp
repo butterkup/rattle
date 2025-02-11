@@ -23,7 +23,7 @@ namespace rattle::lexer::internal {
       base.report(error_kind_t::partial_toplvl_escape);
     }
     // Discard
-    base.consume_lexeme();
+    base.flush();
   }
 
   token_t lexer_t::scan() {
@@ -34,6 +34,12 @@ namespace rattle::lexer::internal {
         case '\'':
         case '"':   return consume_string();
         case '#':   return consume_comment();
+        // Windows CRLF
+        case '\r':  if (base.match_next('\n')) {
+                      return base.make_token(token_kind_t::Newline);
+                    } else {
+                      return base.make_token(error_kind_t::partially_formed_crlf);
+                    }
         case '\n':  return base.make_token((base.eat(), token_kind_t::Newline));
         case ';':   return base.make_token((base.eat(), token_kind_t::Semicolon));
         case '.':   return base.make_token((base.eat(), token_kind_t::Dot));

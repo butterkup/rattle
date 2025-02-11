@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <string>
 #include <string_view>
 
 namespace rattle::lexer {
@@ -17,7 +18,7 @@ namespace rattle::lexer {
 
   // Preprocess error variants
   enum class error_kind_t {
-#define ERROR_MACRO(error) error,
+#define rattle_pp_error_macro(error) error,
 #include "errors_pp.h"
   };
 
@@ -37,8 +38,8 @@ namespace rattle::lexer {
 
   // Preprocess token variants
   enum class token_kind_t {
-#define rattle_undef_forget_token_macro
-#define TOKEN_MACRO(kind, _) kind,
+#define rattle_undef_token_macro
+#define rattle_pp_token_macro(kind, _) kind,
 #include "tokens_pp.h"
   };
 
@@ -64,6 +65,9 @@ namespace rattle::lexer {
     std::string_view view;
   };
 
+  // Get the string escaped as std::string
+  std::string to_string(escape_t const &);
+
   // Printers: token_t error_t location_t escape_t
   std::ostream &operator<<(std::ostream &, token_t const &);
   std::ostream &operator<<(std::ostream &, error_t const &);
@@ -74,11 +78,22 @@ namespace rattle::lexer {
   // * Lines will be needed to report errors, why not cache them here.
   // * The internal state of the lexer needn't care how errors flow
   //   in the system, only that it reports and goes on.
-  struct manager_t {
+  struct reactor_t {
+    // Should the lexer flush the rest of the program or just keep going
+    // after reporting an error
     enum class onerror { short_circuit, keep_going };
+    // Report encountered errors
     virtual onerror report(error_t) = 0;
-    virtual void cache_line(std::size_t, const std::string_view) = 0;
-    virtual ~manager_t() = default;
+    // Once the lexer consumes a whole line, it notifies the reactor the
+    // line number and line payload consumed
+    // NOTE: Since a line is is not guaranteed to end with the new line
+    // character, the line passed here doesn't include the newline
+    // for consistency; all lines are just their payload.
+    virtual void cache(std::size_t, const std::string_view) {}
+    // For debugging reasons or something; tap into all
+    // tokens created by the cursor.
+    virtual void trace(token_t const &) {}
+    virtual ~reactor_t() = default;
   };
 
   namespace internal {
@@ -93,17 +108,17 @@ namespace rattle::lexer {
       const std::string_view program;
       state_t start, current;
       std::string_view::const_iterator line_start;
-      manager_t &manager;
+      reactor_t &reactor;
 
       void flush_program() {
         start.iterator = current.iterator = program.cend();
       }
 
     public:
-      cursor_t(const std::string_view program, manager_t &manager)
+      cursor_t(const std::string_view program, reactor_t &reactor)
         : program{program}, start{location_t::valid(), program.cbegin()},
           current{location_t::valid(), program.cbegin()},
-          line_start{program.cbegin()}, manager{manager} {}
+          line_start{program.cbegin()}, reactor{reactor} {}
 
       // Check if we are at the end of the program.
       bool empty() const { return current.iterator == program.cend(); }
@@ -114,25 +129,25 @@ namespace rattle::lexer {
       }
       // Report an error to the manager
       void report(error_t error) {
-        if (manager.report(error) == manager_t::onerror::short_circuit) {
+        if (reactor.report(error) == reactor_t::onerror::short_circuit) {
           flush_program();
         } /* else keep_going */
       }
       void report(error_kind_t error) {
-        report({error, start.location, current.location, get_lexeme()});
+        report({error, start.location, current.location, buffer()});
       }
       void report(error_kind_t error, state_t mark) {
         report({error, mark.location, current.location,
           {mark.iterator, current.iterator}});
       }
       // Flush lexeme, note: the current character is not yet consumed
-      void consume_lexeme() { start = current; }
+      void flush() { start = current; }
       // Get location where lexeme started
       location_t start_location() const { return start.location; }
       // Get current location; where we at?
       location_t current_location() const { return current.location; }
       // Get current lexeme collected so far
-      std::string_view get_lexeme() const {
+      std::string_view buffer() const {
         return {start.iterator, current.iterator};
       }
       // Get current point in the program
@@ -152,12 +167,13 @@ namespace rattle::lexer {
       bool match(char expected) {
         return safe() and expected == peek() ? (eat(), true) : false;
       }
-      // Advance and match if safe
+      // Advance and match if safe [UNSAFE: calls `eat`]
       bool match_next(char expected) { return (eat(), match(expected)); }
       // Make a token of kind
       token_t make_token(token_kind_t kind) {
-        token_t token = {kind, start.location, current.location, get_lexeme()};
-        consume_lexeme();
+        token_t token{kind, start.location, current.location, buffer()};
+        reactor.trace(token);
+        flush();
         return token;
       }
       // Report and make an error token
@@ -181,8 +197,8 @@ namespace rattle::lexer {
     // currently and notifies the manager on relevant events like
     // errors encountered and lines processed.
     struct lexer_t {
-      lexer_t(std::string_view program, manager_t &manager)
-        : base{program, manager} {}
+      lexer_t(std::string_view program, reactor_t &reactor)
+        : base{program, reactor} {}
       // Scan the next token
       token_t scan();
       bool empty() const { return base.empty(); }
@@ -202,8 +218,8 @@ namespace rattle::lexer {
   // A facade, simpler and hides the complexity by exposing a limited
   // API to its owner, afterall, they mainly expect `lexer.lex() -> token`
   struct lexer_t {
-    lexer_t(std::string_view program, manager_t &manager)
-      : lexer{program, manager} {}
+    lexer_t(std::string_view program, reactor_t &reactor)
+      : lexer{program, reactor} {}
     token_t lex() { return lexer.scan(); }
     bool empty() const { return lexer.empty(); }
 

@@ -3,12 +3,12 @@
 #ifndef rattle_keyword_statement_h
 # define rattle_keyword_statement_h
 
-TOKEN_MACRO(Return, "return")
-TOKEN_MACRO(If, "if")
-TOKEN_MACRO(Else, "else")
-TOKEN_MACRO(For, "for")
-TOKEN_MACRO(While, "while")
-TOKEN_MACRO(Break, "break")
-TOKEN_MACRO(Continue, "continue")
+rattle_pp_token_macro(Return, "return")
+rattle_pp_token_macro(If, "if")
+rattle_pp_token_macro(Else, "else")
+rattle_pp_token_macro(For, "for")
+rattle_pp_token_macro(While, "while")
+rattle_pp_token_macro(Break, "break")
+rattle_pp_token_macro(Continue, "continue")
 
 #endif

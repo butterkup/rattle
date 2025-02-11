@@ -1,6 +1,6 @@
-#ifndef TOKEN_MACRO
-# error "macro TOKEN_MACRO(arg1, arg2) was not defined"
-# define TOKEN_MACRO(k, s)
+#ifndef rattle_pp_token_macro
+# error "must define macro `rattle_pp_token_macro(arg1, arg2)`"
+# define rattle_pp_token_macro(k, s)
 #endif
 
-// Ensures TOKEN_MACRO(kind, skind) macro function is defined
+// Ensures rattle_pp_token_macro(kind, skind) macro function is defined

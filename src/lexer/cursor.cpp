@@ -3,6 +3,7 @@
 #include <cctype>
 #include <iomanip>
 #include <rattle/lexer/lexer.hpp>
+#include <sstream>
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
@@ -29,8 +30,8 @@ namespace rattle::lexer {
 
     // Mapping from keyword string to token_kind_t
     static std::unordered_map<std::string_view, token_kind_t> const keywords{
-#define rattle_undef_forget_token_macro
-#define TOKEN_MACRO(Kind, keyword) {keyword, token_kind_t::Kind},
+#define rattle_undef_token_macro
+#define rattle_pp_token_macro(Kind, keyword) {keyword, token_kind_t::Kind},
 #include <rattle/lexer/require_pp/keywords.h>
 #include <rattle/lexer/require_pp/undefine.h>
     };
@@ -39,7 +40,7 @@ namespace rattle::lexer {
     token_t lexer_t::consume_identifier() {
       base.eat_while(utility::is_identifier_body_char);
       try {
-        return base.make_token(keywords.at(base.get_lexeme()));
+        return base.make_token(keywords.at(base.buffer()));
       } catch (std::out_of_range &) {
         return base.make_token(token_kind_t::Identifier);
       }
@@ -54,16 +55,17 @@ namespace rattle::lexer {
       base.eat_while([](char ch) { return ch != '\n'; });
       return base.make_token(token_kind_t::Pound);
     }
+
     char cursor_t::eat() {
       assert(not empty());
       current.location.column++;
       if (*current.iterator == '\n') {
         current.location.column = location_t::valid().column;
-        manager.cache_line(
+        reactor.cache(
           current.location.line++, {line_start, current.iterator});
         line_start = current.iterator + 1;
       } else if (empty() and line_start != current.iterator) {
-        manager.cache_line(
+        reactor.cache(
           current.location.line, {line_start, current.iterator});
         line_start = current.iterator;
       }
@@ -74,7 +76,7 @@ namespace rattle::lexer {
   std::string_view to_string(token_kind_t kind) {
     switch (kind) {
 #define rattle_undef_forget_token_macro
-#define TOKEN_MACRO(Kind, _)                                                   \
+#define rattle_pp_token_macro(Kind, _)                                         \
   case token_kind_t::Kind:                                                     \
     return #Kind;
 #include <rattle/lexer/tokens_pp.h>
@@ -85,13 +87,19 @@ namespace rattle::lexer {
 
   std::string_view to_string(error_kind_t kind) {
     switch (kind) {
-#define ERROR_MACRO(Kind)                                                      \
+#define rattle_pp_error_macro(Kind)                                            \
   case error_kind_t::Kind:                                                     \
     return #Kind;
 #include <rattle/lexer/errors_pp.h>
     default:
       return "(error_kind_t::Unknown)";
     }
+  }
+
+  std::string to_string(escape_t const &e) {
+    std::ostringstream buf;
+    buf << e;
+    return buf.str();
   }
 
   std::ostream &operator<<(std::ostream &s, location_t const &loc) {

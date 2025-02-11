@@ -3,10 +3,10 @@
 #ifndef rattle_symbolic_ops_h
 # define rattle_symbolic_ops_h
 
-TOKEN_MACRO(Plus, "+")
-TOKEN_MACRO(Minus, "-")
-TOKEN_MACRO(Slash, "/")
-TOKEN_MACRO(Star, "*")
-TOKEN_MACRO(Dot, ".")
+rattle_pp_token_macro(Plus, "+")
+rattle_pp_token_macro(Minus, "-")
+rattle_pp_token_macro(Slash, "/")
+rattle_pp_token_macro(Star, "*")
+rattle_pp_token_macro(Dot, ".")
 
 #endif

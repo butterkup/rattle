@@ -3,13 +3,13 @@
 #ifndef rattle_delimiters_h
 # define rattle_delimiters_h
 
-TOKEN_MACRO(OpenBrace, "{")
-TOKEN_MACRO(CloseBrace, "}")
-TOKEN_MACRO(OpenBracket, "[")
-TOKEN_MACRO(CloseBracket, "]")
-TOKEN_MACRO(OpenParen, "(")
-TOKEN_MACRO(CloseParen, ")")
-TOKEN_MACRO(Comma, ",")
-TOKEN_MACRO(Pound, "#")
+rattle_pp_token_macro(OpenBrace, "{")
+rattle_pp_token_macro(CloseBrace, "}")
+rattle_pp_token_macro(OpenBracket, "[")
+rattle_pp_token_macro(CloseBracket, "]")
+rattle_pp_token_macro(OpenParen, "(")
+rattle_pp_token_macro(CloseParen, ")")
+rattle_pp_token_macro(Comma, ",")
+rattle_pp_token_macro(Pound, "#")
 
 #endif

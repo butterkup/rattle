@@ -3,10 +3,10 @@
 #ifndef rattle_assignment_ops_h
 # define rattle_assignment_ops_h
 
-TOKEN_MACRO(Equal, "=")
-TOKEN_MACRO(PlusEqual, "+=")
-TOKEN_MACRO(MinusEqual, "-=")
-TOKEN_MACRO(SlashEqual, "/=")
-TOKEN_MACRO(StarEqual, "*=")
+rattle_pp_token_macro(Equal, "=")
+rattle_pp_token_macro(PlusEqual, "+=")
+rattle_pp_token_macro(MinusEqual, "-=")
+rattle_pp_token_macro(SlashEqual, "/=")
+rattle_pp_token_macro(StarEqual, "*=")
 
 #endif

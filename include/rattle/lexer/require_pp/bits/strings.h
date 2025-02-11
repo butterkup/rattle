@@ -3,7 +3,7 @@
 #ifndef rattle_strings_h
 # define rattle_strings_h
 
-TOKEN_MACRO(MultilineString, "")  // """Long\nString""" '''Also\nLong\nString'''
-TOKEN_MACRO(SingleLineString, "") // "One line string" 'One line string'
+rattle_pp_token_macro(MultilineString, "")  // """Long\nString""" '''Also\nLong\nString'''
+rattle_pp_token_macro(SingleLineString, "") // "One line string" 'One line string'
 
 #endif

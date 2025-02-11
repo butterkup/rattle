@@ -3,9 +3,9 @@
 #ifndef rattle_keyword_literal_h
 # define rattle_keyword_literal_h
 
-TOKEN_MACRO(True, "True")
-TOKEN_MACRO(False, "False")
-TOKEN_MACRO(None, "None")
+rattle_pp_token_macro(True, "True")
+rattle_pp_token_macro(False, "False")
+rattle_pp_token_macro(None, "None")
 
 #endif
 

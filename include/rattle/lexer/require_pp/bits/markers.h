@@ -3,10 +3,10 @@
 #ifndef rattle_markers_h
 # define rattle_markers_h
 
-TOKEN_MACRO(Error, "Error Occurred")    // If the lexer encounters and error
-TOKEN_MACRO(Eot, "End Of Token stream") // Marks end of token stream/file
-TOKEN_MACRO(Whitespace, " \t\r\f")      // Black spaces.
-TOKEN_MACRO(Semicolon, ";")             // Statement terminators:
-TOKEN_MACRO(Newline, "\n")              // Newline and Semicolon
+rattle_pp_token_macro(Error, "Error Occurred")    // If the lexer encounters and error
+rattle_pp_token_macro(Eot, "End Of Token stream") // Marks end of token stream/file
+rattle_pp_token_macro(Whitespace, " \t\r\f")      // Black spaces.
+rattle_pp_token_macro(Semicolon, ";")             // Statement terminators:
+rattle_pp_token_macro(Newline, "\n")              // Newline and Semicolon
 
 #endif

@@ -7,10 +7,10 @@ DEPMK=$(CUR_DIR)/ignore.deps.mk
 PROGRAM=$(CUR_DIR)/rattle
 
 CXX=clang++
-CXXFLAGS=-std=c++20 -fPIC -Wall -I$(INC_DIR)
+CXXFLAGS=-std=c++20 -fsanitize=undefined -fPIC -Wall -I$(INC_DIR)
 
 ifeq ($(build),release)
-	CXXFLAGS+=-O2
+	CXXFLAGS+=-O2 -DNDEBUG
 else
 	CXXFLAGS+=-g
 endif
