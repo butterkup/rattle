@@ -5,12 +5,12 @@
 namespace rattle::lexer::internal {
   namespace strings {
     // Handle in string escapes.
-    static void escape_sequence(cursor_t &base, token_kind_t &kind) {
+    static void escape_sequence(Cursor &base, token::Kind &kind) {
       auto mark = base.bookmark();
       base.eat(); // Consume the escaper
       if (base.empty()) {
-        kind = token_kind_t::Error;
-        base.report(error_kind_t::partial_string_escape, mark);
+        kind = token::Kind::Error;
+        base.report(error::Kind::partial_string_escape, mark);
       } else {
         switch (base.peek()) {
         case '0':  // Null
@@ -31,20 +31,21 @@ namespace rattle::lexer::internal {
           if (base.safe(2)) {
             if (not(utility::is_hexadecimal(base.peek(1)) and
                     utility::is_hexadecimal(base.peek(2)))) {
-              kind = token_kind_t::Error;
-              base.report(error_kind_t::invalid_escape_hex_sequence, mark);
+              kind = token::Kind::Error;
+              base.report(error::Kind::invalid_escape_hex_sequence, mark);
+            } else {
+              base.eat();
+              base.eat();
             }
-            base.eat();
-            base.eat();
           } else {
-            kind = token_kind_t::Error;
-            base.report(error_kind_t::partial_string_hex_escape, mark);
+            kind = token::Kind::Error;
+            base.report(error::Kind::partial_string_hex_escape, mark);
           }
           base.eat();
           break;
         default:
           base.eat();
-          base.report(error_kind_t::invalid_escape_sequence);
+          base.report(error::Kind::invalid_escape_sequence);
         }
       }
     }
@@ -53,11 +54,11 @@ namespace rattle::lexer::internal {
     // (expressions with multiline constant) of the function removing
     // dead code and optimize for each listed variant.
     template <bool multiline>
-    static token_kind_t consume_string_variant(cursor_t &base) {
+    static token::Kind consume_string_variant(Cursor &base) {
       const char quote = base.eat();
-      token_kind_t kind = token_kind_t::SingleLineString;
+      token::Kind kind = token::Kind::SingleLineString;
       if constexpr (multiline) {
-        kind = token_kind_t::MultilineString;
+        kind = token::Kind::MultilineString;
         base.eat();
         base.eat();
       }
@@ -67,10 +68,9 @@ namespace rattle::lexer::internal {
                              ch != quote and ch != '\\' and ch != '\n';
         });
         if (base.empty()) {
-          kind = token_kind_t::Error;
-          base.report(multiline ?
-                        error_kind_t::unterminated_multi_line_string :
-                        error_kind_t::unterminated_single_line_string);
+          kind = token::Kind::Error;
+          base.report(multiline ? error::Kind::unterminated_multi_line_string :
+                                  error::Kind::unterminated_single_line_string);
           return kind;
         } else {
           switch (base.peek()) {
@@ -82,8 +82,8 @@ namespace rattle::lexer::internal {
               // should never hit this.
               assert(false);
             } else {
-              kind = token_kind_t::Error;
-              base.report(error_kind_t::unterminated_single_line_string);
+              kind = token::Kind::Error;
+              base.report(error::Kind::unterminated_single_line_string);
               return kind;
             }
             break;
@@ -105,7 +105,7 @@ namespace rattle::lexer::internal {
 
     // Determine which string variant to call and delegate lexing to it
     // forming a token on the way out
-    static token_t consume_string(cursor_t &base) {
+    static token::Token consume_string(Cursor &base) {
       const char quote = base.peek();
       return base.make_token(
         base.safe(2) and base.peek(1) == quote and base.peek(2) == quote ?
@@ -114,7 +114,7 @@ namespace rattle::lexer::internal {
     }
   } // namespace strings
 
-  // A Facade; hides all the string lexing complexity from cursor_t
-  token_t lexer_t::consume_string() { return strings::consume_string(base); }
+  // A Facade; hides all the string lexing complexity from Cursor
+  token::Token Lexer::consume_string() { return strings::consume_string(base); }
 } // namespace rattle::lexer::internal
 

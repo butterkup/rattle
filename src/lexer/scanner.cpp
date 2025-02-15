@@ -2,14 +2,14 @@
 #include <rattle/lexer/lexer.hpp>
 
 namespace rattle::lexer::internal {
-  static void toplvl_escape(cursor_t &base) {
+  static void toplvl_escape(Cursor &base) {
     base.eat(); // consume escaper: backslash
     if (base.safe()) {
       switch (base.peek()) {
       // Windows CRLF
       case '\r':
         if (not base.match_next('\n')) {
-          base.report(error_kind_t::partially_formed_crlf);
+          base.report(error::Kind::partially_formed_crlf);
         }
         break;
       case '\n':
@@ -17,16 +17,16 @@ namespace rattle::lexer::internal {
         break;
       default:
         base.eat();
-        base.report(error_kind_t::invalid_toplvl_escape_sequence);
+        base.report(error::Kind::invalid_toplvl_escape_sequence);
       }
     } else {
-      base.report(error_kind_t::partial_toplvl_escape);
+      base.report(error::Kind::partial_toplvl_escape);
     }
     // Discard
-    base.flush();
+    base.flush_lexeme();
   }
 
-  token_t lexer_t::scan() {
+  token::Token Lexer::scan() {
     while (not base.empty()) {
       switch (base.peek()) {
         // clang-format off
@@ -36,44 +36,44 @@ namespace rattle::lexer::internal {
         case '#':   return consume_comment();
         // Windows CRLF
         case '\r':  if (base.match_next('\n')) {
-                      return base.make_token(token_kind_t::Newline);
+                      return base.make_token(token::Kind::Newline);
                     } else {
-                      return base.make_token(error_kind_t::partially_formed_crlf);
+                      return base.make_token(error::Kind::partially_formed_crlf);
                     }
-        case '\n':  return base.make_token((base.eat(), token_kind_t::Newline));
-        case ';':   return base.make_token((base.eat(), token_kind_t::Semicolon));
-        case '.':   return base.make_token((base.eat(), token_kind_t::Dot));
-        case ',':   return base.make_token((base.eat(), token_kind_t::Comma));
-        case '(':   return base.make_token((base.eat(), token_kind_t::OpenParen));
-        case ')':   return base.make_token((base.eat(), token_kind_t::CloseParen));
-        case '{':   return base.make_token((base.eat(), token_kind_t::OpenBrace));
-        case '}':   return base.make_token((base.eat(), token_kind_t::CloseBrace));
-        case '[':   return base.make_token((base.eat(), token_kind_t::OpenBracket));
-        case ']':   return base.make_token((base.eat(), token_kind_t::CloseBracket));
+        case '\n':  return base.make_token((base.eat(), token::Kind::Newline));
+        case ';':   return base.make_token((base.eat(), token::Kind::Semicolon));
+        case '.':   return base.make_token((base.eat(), token::Kind::Dot));
+        case ',':   return base.make_token((base.eat(), token::Kind::Comma));
+        case '(':   return base.make_token((base.eat(), token::Kind::OpenParen));
+        case ')':   return base.make_token((base.eat(), token::Kind::CloseParen));
+        case '{':   return base.make_token((base.eat(), token::Kind::OpenBrace));
+        case '}':   return base.make_token((base.eat(), token::Kind::CloseBrace));
+        case '[':   return base.make_token((base.eat(), token::Kind::OpenBracket));
+        case ']':   return base.make_token((base.eat(), token::Kind::CloseBracket));
         case '=':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::EqualEqual:
-                      token_kind_t::Equal);
+                      token::Kind::EqualEqual:
+                      token::Kind::Equal);
         case '-':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::MinusEqual:
-                      token_kind_t::Minus);
+                      token::Kind::MinusEqual:
+                      token::Kind::Minus);
         case '+':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::PlusEqual:
-                      token_kind_t::Plus);
+                      token::Kind::PlusEqual:
+                      token::Kind::Plus);
         case '*':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::StarEqual:
-                      token_kind_t::Star);
+                      token::Kind::StarEqual:
+                      token::Kind::Star);
         case '/':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::SlashEqual:
-                      token_kind_t::Slash);
+                      token::Kind::SlashEqual:
+                      token::Kind::Slash);
         case '!':   return base.match_next('=') ?
-                      base.make_token(token_kind_t::NotEqual) :
-                      base.make_token(error_kind_t::partial_not_equal);
+                      base.make_token(token::Kind::NotEqual) :
+                      base.make_token(error::Kind::partial_not_equal);
         case '<':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::LessEqual :
-                      token_kind_t::LessThan);
+                      token::Kind::LessEqual :
+                      token::Kind::LessThan);
         case '>':   return base.make_token(base.match_next('=') ?
-                      token_kind_t::GreaterEqual :
-                      token_kind_t::GreaterThan);
+                      token::Kind::GreaterEqual :
+                      token::Kind::GreaterThan);
         default:
           if (utility::is_whitespace(base.peek()))
             return consume_whitespace();
@@ -81,10 +81,10 @@ namespace rattle::lexer::internal {
             return consume_number();
           if (utility::is_identifier_start_char(base.peek()))
             return consume_identifier();
-          return base.make_token((base.eat(), error_kind_t::unrecognized_toplvl_character));
+          return base.make_token((base.eat(), error::Kind::unrecognized_toplvl_character));
         // clang-format on
       }
     }
-    return base.make_token(token_kind_t::Eot);
+    return base.make_token(token::Kind::Eot);
   }
 } // namespace rattle::lexer::internal
