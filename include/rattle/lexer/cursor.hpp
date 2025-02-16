@@ -23,15 +23,18 @@ namespace rattle::lexer::internal {
     std::string_view::const_iterator line_start;
     IReactor &reactor;
 
+    // Flush lexeme buffer.
+    // Since every character must belong to to one Token's lexeme
+    // then flushing will be hidden only exposed as `make_token`.
+    // NOTE: the current character is not yet consumed
+    void flush_buffer() { start = current; }
+
   public:
     Cursor(const std::string_view program, IReactor &reactor)
       : program{program}, start{token::Location::Valid(), program.cbegin()},
         current{token::Location::Valid(), program.cbegin()},
         line_start{program.cbegin()}, reactor{reactor} {}
 
-    // Flush lexeme buffer
-    // NOTE: the current character is not yet consumed
-    void flush_lexeme() { start = current; }
     // Jump to the end of the program.
     void drain_program() { start.iterator = current.iterator = program.cend(); }
     // Check if we are at the end of the program.
@@ -85,7 +88,7 @@ namespace rattle::lexer::internal {
     token::Token make_token(token::Kind kind) {
       token::Token token{kind, start.location, current.location, buffer()};
       reactor.trace(token);
-      flush_lexeme();
+      flush_buffer();
       return token;
     }
     // Report and make an error token

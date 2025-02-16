@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <rattle/lexer/lexer.hpp>
+#include <rattle/utility.hpp>
 #include <span>
 #include <vector>
 
@@ -17,29 +18,34 @@ std::optional<std::string> read_file(const char *filepath) {
   return content;
 }
 
-struct lexer_manager_t: rattle::lexer::reactor_t {
-  std::vector<rattle::lexer::error_t> errors;
-  lexer_manager_t(): errors{} {}
-  onerror report(rattle::lexer::error_t error) override {
+struct LexerReactor: rattle::lexer::IReactor {
+  std::vector<rattle::lexer::error::Error> errors;
+  LexerReactor(): errors{} {};
+
+  rattle::lexer::OnError report(rattle::lexer::error::Error error) {
     errors.push_back(error);
-    return onerror::keep_going;
+    return rattle::lexer::OnError::Resume;
+  }
+
+  void show_errors() const {
+    for (auto &error : errors) {
+      std::cerr << error << '\n';
+    }
   }
 };
 
 void lex_file(const char *filepath) {
-  std::string const rawpath = to_string(rattle::lexer::escape_t{filepath});
+  std::string const rawpath = to_string(rattle::utility::escape{filepath});
   if (auto content = read_file(filepath)) {
     std::cout << "------------------[ " << rawpath << " ]------------------\n";
-    lexer_manager_t manager;
-    rattle::lexer::lexer_t lexer{*content, manager};
+    LexerReactor reactor;
+    rattle::lexer::Lexer lexer{*content, reactor};
     while (not lexer.empty()) {
       auto token = lexer.lex();
       std::cout << token << '\n';
     }
     std::cerr << "-------------[ ERRORS: " << rawpath << " ]-------------\n";
-    for (auto &error : manager.errors) {
-      std::cerr << error << '\n';
-    }
+    reactor.show_errors();
   } else {
     std::cerr << rawpath << ": Error reading file." << '\n';
   }

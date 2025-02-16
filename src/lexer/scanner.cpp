@@ -2,7 +2,7 @@
 #include <rattle/lexer/lexer.hpp>
 
 namespace rattle::lexer::internal {
-  static void toplvl_escape(Cursor &base) {
+  static token::Token toplvl_escape(Cursor &base) {
     base.eat(); // consume escaper: backslash
     if (base.safe()) {
       switch (base.peek()) {
@@ -22,15 +22,14 @@ namespace rattle::lexer::internal {
     } else {
       base.report(error::Kind::partial_toplvl_escape);
     }
-    // Discard
-    base.flush_lexeme();
+    return base.make_token(token::Kind::Escape);
   }
 
   token::Token Lexer::scan() {
     while (not base.empty()) {
       switch (base.peek()) {
         // clang-format off
-        case '\\':  toplvl_escape(base); break;
+        case '\\':  return toplvl_escape(base);
         case '\'':
         case '"':   return consume_string();
         case '#':   return consume_comment();
