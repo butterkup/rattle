@@ -55,7 +55,7 @@ $(LIBRARY): $(OBJECTS)
 	@echo Creating library: $@
 
 define preprocess_recipe
-	$(CXX) $(CXXFLAGS) -DRATTLE_SOURCE_ONLY -E -o $@ $<
+	$(CXX) $(CXXFLAGS) -E -o $@ $<
 endef
 
 %.hpp.ii: %.hpp
