@@ -18,15 +18,15 @@ namespace rattle::lexer {
   struct IReactor {
     // Reporting an error is the most important and must be provided
     // the others can be ignored but tappable.
-    virtual OnError report(error::Error) = 0;
+    virtual OnError report(error::Error) noexcept = 0;
     // Notify the reactor when a whole line is consumed.
     // Reports  the line number and line contents.
-    // NOTE: Line contents will not include the newline character at the end
+    // NOTE: Line content will not include the newline character at the end
     // for consistency
-    virtual void cache(std::size_t, std::string_view) {};
+    virtual void cache(std::size_t, std::string_view) noexcept {};
     // Notify the reactor when a token is created
     // For debugging or something!!! Do as You Desire.
-    virtual void trace(token::Token &) {}
+    virtual void trace(token::Token &) noexcept {}
     virtual ~IReactor() = default;
   };
 } // namespace rattle::lexer

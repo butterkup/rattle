@@ -7,12 +7,12 @@ DEPMK=$(CUR_DIR)/ignore.deps.mk
 PROGRAM=$(CUR_DIR)/rattle
 
 CXX=clang++
-CXXFLAGS=-std=c++20 -fsanitize=undefined -fPIC -Wall -I$(INC_DIR)
+CXXFLAGS=-std=c++20 -pedantic -fsanitize=undefined -fPIC -Wall -I$(INC_DIR)
 
 ifeq ($(build),release)
 	CXXFLAGS+=-O2 -DNDEBUG
 else
-	CXXFLAGS+=-g
+	CXXFLAGS+=-Og -g
 endif
 
 SOURCES=$(shell find $(SRC_DIR) -name '*.cpp' -type f) $(PROGRAM).cpp
@@ -84,11 +84,14 @@ clean_program:
 	@rm -rfv $(PROGRAM) $(PROGRAM).o $(LIBRARY)
 	@if [ -e "$(LIB_DIR)" ]; then rmdir --ignore-fail-on-non-empty "$(LIB_DIR)"; fi;
 
+.PHONY+=clean_deps
+clean_deps:
+	@echo Removing DependencyMakefiles
+	@rm -rfv $(DEPS) $(DEPMK)
+
 .PHONY+=clean
 clean: clean_objects clean_program clean_preprocess
 
 .PHONY+=clean_all
-clean_all: clean
-	@echo Removing DependencyMakefiles
-	@rm -rfv $(DEPS) $(DEPMK)
+clean_all: clean clean_deps
 
