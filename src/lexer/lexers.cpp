@@ -1,4 +1,3 @@
-#include "utility.hpp"
 #include <cassert>
 #include <cctype>
 #include <ostream>
@@ -10,24 +9,6 @@
 
 namespace rattle::lexer {
   namespace internal {
-    namespace utility {
-      bool is_binary(char ch) { return (unsigned)ch - '0' < 2; }
-      bool is_octal(char ch) { return (unsigned)ch - '0' < 8; }
-      bool is_decimal(char ch) { return (unsigned)ch - '0' < 10; }
-      bool is_hexadecimal(char ch) {
-        return is_decimal(ch) or ((unsigned)ch | 32) - 'a' < 6;
-      }
-      bool is_identifier_start_char(char ch) {
-        return ch == '_' or ((unsigned)ch | 32) - 'a' < 26;
-      }
-      bool is_identifier_body_char(char ch) {
-        return is_decimal(ch) or is_identifier_start_char(ch);
-      }
-      bool is_whitespace(char ch) {
-        return ch == ' ' or ch == '\t' or ch == '\r';
-      }
-    } // namespace utility
-
     // Mapping from keyword string to token::Kind
     static std::unordered_map<std::string_view, token::Kind> const keywords{
 #define rattle_undef_token_macro
@@ -37,7 +18,7 @@ namespace rattle::lexer {
     };
 
     // consume names; keywords and variable names.
-    token::Token Lexer::consume_identifier() {
+    token::Token Lexer::consume_identifier() noexcept {
       base.eat_while(utility::is_identifier_body_char);
       try {
         return base.make_token(keywords.at(base.buffer()));
@@ -46,23 +27,23 @@ namespace rattle::lexer {
       }
     }
 
-    token::Token Lexer::consume_whitespace() {
+    token::Token Lexer::consume_whitespace() noexcept {
       base.eat_while(utility::is_whitespace);
       return base.make_token(token::Kind::Whitespace);
     }
 
-    token::Token Lexer::consume_comment() {
+    token::Token Lexer::consume_comment() noexcept {
       base.eat_while([](char ch) { return ch != '\n'; });
       return base.make_token(token::Kind::Pound);
     }
 
-    char Cursor::eat() {
+    char Cursor::eat() noexcept {
       assert(not empty());
       current.location.column++;
       if (*current.iterator == '\n') {
         current.location.column = token::Location::Valid().column;
         reactor.cache(current.location.line++, {line_start, current.iterator});
-        line_start = current.iterator + 1;
+        line_start = current.iterator + 1; // skip newline
       } else if (empty() and line_start != current.iterator) {
         reactor.cache(current.location.line, {line_start, current.iterator});
         line_start = current.iterator;

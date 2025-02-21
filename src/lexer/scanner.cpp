@@ -1,8 +1,8 @@
-#include "utility.hpp"
 #include <rattle/lexer/lexer.hpp>
+#include <rattle/utility.hpp>
 
 namespace rattle::lexer::internal {
-  static token::Token toplvl_escape(Cursor &base) {
+  static token::Token toplvl_escape(Cursor &base) noexcept {
     base.eat(); // consume escaper: backslash
     if (base.safe()) {
       switch (base.peek()) {
@@ -25,20 +25,21 @@ namespace rattle::lexer::internal {
     return base.make_token(token::Kind::Escape);
   }
 
-  token::Token Lexer::scan() {
+  token::Token Lexer::scan() noexcept {
     while (not base.empty()) {
       switch (base.peek()) {
         // clang-format off
-        case '\\':  return toplvl_escape(base);
         case '\'':
         case '"':   return consume_string();
         case '#':   return consume_comment();
+        case '\\':  return toplvl_escape(base);
         // Windows CRLF
-        case '\r':  if (base.match_next('\n')) {
-                      return base.make_token(token::Kind::Newline);
-                    } else {
-                      return base.make_token(error::Kind::partially_formed_crlf);
-                    }
+        case '\r':  return (base.match_next('\n'))?
+                      base.make_token(token::Kind::Newline):
+                      base.make_token(error::Kind::partially_formed_crlf);
+        case 'r':
+        case 'R':   return (base.eat(), (base.peek() == '"' or base.peek() == '\''))?
+                      consume_raw_string(): consume_identifier();
         case '\n':  return base.make_token((base.eat(), token::Kind::Newline));
         case ';':   return base.make_token((base.eat(), token::Kind::Semicolon));
         case '.':   return base.make_token((base.eat(), token::Kind::Dot));
