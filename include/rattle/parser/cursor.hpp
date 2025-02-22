@@ -2,29 +2,38 @@
 
 #include "api.hpp"
 #include "error.hpp"
+#include <cassert>
 #include <rattle/lexer.hpp>
 #include <rattle/token/token.hpp>
 
 namespace rattle::parser::internal {
   struct State {
     enum Filter : int {
+      // Skip nothing, not even whitespace.
+      NONE = 0,
+      // Skip ERROR token
       ERROR = 1,
+      // Skip ESCAPE token
       ESCAPE = 1 << 1,
+      // Skip NEWLINE token
       NEWLINE = 1 << 2,
+      // Skip COMMENT token
       COMMENT = 1 << 3,
+      // Skip WHITESPACE token
       WHITESPACE = 1 << 4,
+      // Cannot imagine why, but here we are.
+      ALL = 0xFF,
 
-      WSERES = WHITESPACE | ERROR | ESCAPE,
-      COWSER = COMMENT | WSERES,
+      // Skip COM, WS, ESC and ERR tokens
+      EOS = COMMENT | WHITESPACE | ESCAPE | ERROR,
 
-      INL = NEWLINE | COWSER,
-
-      DEFAULT = WSERES
+      // Skip WS, ERR and ESC tokens
+      DEFAULT = WHITESPACE | ERROR | ESCAPE
     };
 
-    bool ignore(token::Token const &token) const {
+    bool skip(token::Token const &token) const {
       switch (token.kind) {
-      // Handling `token::Eot` will lead to infinite loop
+      // Handling `token::Kind::Eot` might lead to infinite loop
       case token::Kind::Error:
         return flags & State::Filter::ERROR;
       case token::Kind::Newline:
@@ -40,7 +49,7 @@ namespace rattle::parser::internal {
       }
     }
 
-    token::Token current;
+    token::Token first;
     Filter flags;
   };
 
@@ -50,19 +59,6 @@ namespace rattle::parser::internal {
     State state;
     ILexer &lexer;
     IReactor &reactor;
-
-    // Traverse the token stream discarding unwanted tokens as per
-    // `State::Filter` flags, once a wanted one is found, it is set
-    // and return.
-    void set_next_token() {
-      for (;;) {
-        token::Token token = lexer.lex();
-        if (not state.ignore(token)) {
-          state.current = token;
-          break;
-        }
-      }
-    }
 
   public:
     Cursor(ILexer &lexer, IReactor &reactor)
@@ -75,7 +71,7 @@ namespace rattle::parser::internal {
       state.flags = flags;
       return oflags;
     }
-    State::Filter flags(State::Filter flags, State::Filter mask) {
+    State::Filter flags(State::Filter flags, unsigned mask) {
       auto oflags = state.flags;
       state.flags = static_cast<State::Filter>((oflags & mask) | flags);
       return oflags;
@@ -83,30 +79,44 @@ namespace rattle::parser::internal {
 
     Flags with();
     Flags with(State::Filter flags);
-    Flags with(State::Filter flags, State::Filter mask);
+    Flags with(State::Filter flags, unsigned mask);
 
     void drain_program() {
       // Drain the lexer
       lexer.drain();
-      // Set current to an kind `Eot`
-      state.current = lexer.lex();
+      // Lexer must now be empty, from here on, it streams `token::Kind::Eot`
+      assert(lexer.empty());
+      // Set current to token of kind `token::Kind::Eot`
+      state.first = lexer.lex();
+      // Assert for testing purposes
+      assert(iskind(token::Kind::Eot));
     }
 
     bool empty() const { return iskind(token::Kind::Eot); }
-    token::Token const &peek() const { return state.current; }
-    bool iskind(token::Kind kind) const { return state.current.kind == kind; }
+    token::Token const &peek() const { return state.first; }
+    bool iskind(token::Kind kind) const { return iskind() == kind; }
+    token::Kind iskind() const { return state.first.kind; }
 
     void report(error::Error error) {
       if (reactor.report(error) == OnError::Abort) {
         drain_program();
       } /* else `OnError::Resume` */
     }
-    void report(error::Kind kind) { report({kind, state.current}); }
+    void report(error::Kind kind) { report({kind, state.first}); }
     void report(error::Kind kind, token::Token where) { report({kind, where}); }
 
+    // Traverse the token stream discarding unwanted tokens as per
+    // `State::Filter` flags, once a wanted one is found, it is set
+    // and returns the replaced token.
     token::Token eat() {
-      token::Token eaten = state.current;
-      set_next_token();
+      token::Token eaten = state.first;
+      for (;;) {
+        token::Token token = lexer.lex();
+        if (not state.skip(token)) {
+          state.first = token;
+          break;
+        }
+      }
       return eaten;
     }
 
@@ -136,7 +146,7 @@ namespace rattle::parser::internal {
   inline Flags Cursor::with(State::Filter nflags) {
     return {*this, flags(nflags)};
   }
-  inline Flags Cursor::with(State::Filter nflags, State::Filter mask) {
+  inline Flags Cursor::with(State::Filter nflags, unsigned mask) {
     return {*this, flags(nflags, mask)};
   }
 } // namespace rattle::parser::internal

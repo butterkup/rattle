@@ -16,6 +16,9 @@ rattle_pp_error_macro(unexpected_token)
 rattle_pp_error_macro(unterminated_statement)
 rattle_pp_error_macro(unterminated_if_else_expr)
 rattle_pp_error_macro(patial_notin_operator)
+rattle_pp_error_macro(patial_ifelse_operator)
+rattle_pp_error_macro(expected_eos_marker)
+rattle_pp_error_macro(reactor_out_of_memory)
 
 #undef rattle_pp_error_macro
 
