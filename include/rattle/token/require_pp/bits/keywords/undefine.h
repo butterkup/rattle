@@ -4,4 +4,5 @@
 #undef rattle_keyword_statement_h
 #undef rattle_keyword_unary_ops_h
 #undef rattle_keyword_binary_ops_h
+#undef rattle_keyword_other_h
 
