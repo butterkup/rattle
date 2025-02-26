@@ -3,9 +3,10 @@
 #include "api.hpp"
 #include "nodes_kinds.h"
 #include <cassert>
-#include <memory>
+#include <optional>
 #include <rattle/lexer.hpp>
 #include <rattle/token/token.hpp>
+#include <rattle/utility.hpp>
 #include <utility>
 #include <vector>
 
@@ -37,16 +38,16 @@ namespace rattle::tree {
   namespace expr {
     struct BinaryExpr: Expr {
       token::Token op;
-      std::unique_ptr<Expr> left, right;
-      BinaryExpr(token::Token op, std::unique_ptr<Expr> left,
-        std::unique_ptr<Expr> right)
+      utility::Scoped<Expr> left, right;
+      BinaryExpr(token::Token op, utility::Scoped<Expr> left,
+        utility::Scoped<Expr> right)
         : op{op}, left{std::move(left)}, right{std::move(right)} {}
     };
 
     struct UnaryExpr: Expr {
       token::Token op;
-      std::unique_ptr<Expr> operand;
-      UnaryExpr(token::Token op, std::unique_ptr<Expr> operand)
+      utility::Scoped<Expr> operand;
+      UnaryExpr(token::Token op, utility::Scoped<Expr> operand)
         : op{op}, operand{std::move(operand)} {}
     };
 
@@ -55,8 +56,8 @@ namespace rattle::tree {
 #define rattle_undef_token_macro
 #define rattle_pp_token_macro(kind, _)                                         \
   struct kind: BinaryExpr {                                                    \
-    kind(token::Token op, std::unique_ptr<Expr> left,                          \
-      std::unique_ptr<Expr> right)                                             \
+    kind(token::Token op, utility::Scoped<Expr> left,                          \
+      utility::Scoped<Expr> right)                                             \
       : BinaryExpr{op, std::move(left), std::move(right)} {}                   \
     create_expr_visit                                                          \
   };
@@ -67,7 +68,7 @@ namespace rattle::tree {
 #define rattle_undef_token_macro
 #define rattle_pp_token_macro(kind, _)                                         \
   struct kind: UnaryExpr {                                                     \
-    kind(token::Token op, std::unique_ptr<Expr> operand)                       \
+    kind(token::Token op, utility::Scoped<Expr> operand)                       \
       : UnaryExpr{op, std::move(operand)} {}                                   \
     create_expr_visit                                                          \
   };
@@ -77,132 +78,203 @@ namespace rattle::tree {
     // Good old if-else ternary operator: `ontrue if cond else onfalse`
     // It compares to c's conditional operator: `cond ? ontrue : onfalse`
     struct IfElse: Expr {
+      IfElse(token::Token const &kw_if, token::Token const &kw_else,
+        utility::Scoped<Expr> ontrue, utility::Scoped<Expr> cond,
+        utility::Scoped<Expr> onfalse)
+        : Expr{}, kw_if{kw_if}, kw_else{kw_else}, ontrue{std::move(ontrue)},
+          cond{std::move(cond)}, onfalse{std::move(onfalse)} {}
       token::Token kw_if, kw_else;
-      std::unique_ptr<Expr> ontrue, cond, onfalse;
+      utility::Scoped<Expr> ontrue, cond, onfalse;
       create_expr_visit;
     };
 
     // Direct values; literals.
     struct Primary: Expr {
+      Primary(token::Token const &value): Expr{}, value{value} {}
       token::Token value;
       create_expr_visit;
     };
 
-    // Group expression; sole purpose is to
-    // raise the precedence of held expression.
+    // Group expression also represents a tuple depending on held expr
     struct Group: Expr {
+      Group(token::Token const &lparen, token::Token const &rparen,
+        utility::Scoped<Expr> expr)
+        : Expr{}, lparen{lparen}, rparen{rparen}, expr{std::move(expr)} {}
       token::Token lparen, rparen;
-      std::unique_ptr<Expr> expr;
+      utility::Scoped<Expr> expr;
+      create_expr_visit;
+    };
+    // Anonymous function; syntax (|arg1, arg2| (3*arg1 + arg2) - 100)(50, 30) == 80
+    struct Lambda: Expr {
+      Lambda(token::Token const &lbar, token::Token const &rbar,
+        utility::Scoped<Expr> params, utility::Scoped<Expr> body)
+        : Expr{}, lbar{lbar}, rbar{rbar}, params{std::move(params)},
+          body{std::move(body)} {}
+      token::Token lbar, rbar;
+      utility::Scoped<Expr> params, body;
+    };
+    // Call expression; also holds subscript.
+    struct Call: Expr {
+      Call(token::Token const &lparen, token::Token const &rparen,
+        utility::Scoped<Expr> callable, utility::Scoped<Expr> params)
+        : Expr{}, lparen{lparen}, rparen{rparen}, callable{std::move(callable)},
+          params{std::move(params)} {}
+      token::Token lparen, rparen;
+      utility::Scoped<Expr> callable, params;
+      create_expr_visit;
+    };
+    struct IsNot: Expr {
+      IsNot(token::Token const &is_, token::Token const &not_,
+        utility::Scoped<Expr> left, utility::Scoped<Expr> right)
+        : is_{is_}, not_{not_}, left{std::move(left)}, right{std::move(right)} {
+      }
+      token::Token is_, not_;
+      utility::Scoped<Expr> left, right;
+      create_expr_visit;
+    };
+    struct NotIn: Expr {
+      NotIn(token::Token const &not_, token::Token const &in_,
+        utility::Scoped<Expr> left, utility::Scoped<Expr> right)
+        : not_{not_}, in_{in_}, left{std::move(left)}, right{std::move(right)} {
+      }
+      token::Token not_, in_;
+      utility::Scoped<Expr> left, right;
       create_expr_visit;
     };
   } // namespace expr
 
   // Bridge from Expr to Stmt
   struct ExprStmt: Stmt {
-    std::unique_ptr<Expr> expr;
+    ExprStmt(utility::Scoped<Expr> expr): Stmt{}, expr{std::move(expr)} {}
+    utility::Scoped<Expr> expr;
     create_stmt_visit;
   };
 
   // Represents all kinds of assignment
   struct Assignment: Stmt {
-    kinds::Assignment kind;
+    Assignment(token::Token const &tk, utility::Scoped<Expr> left,
+      utility::Scoped<Expr> right)
+      : Stmt{}, op{tk}, left{std::move(left)}, right{std::move(right)} {}
     token::Token op;
-    std::unique_ptr<Expr> left, right;
+    utility::Scoped<Expr> left, right;
     create_stmt_visit;
   };
 
   // Return a value from a function
   struct Return: Stmt {
+    Return(token::Token const &tk, utility::Scoped<Expr> value)
+      : Stmt{}, kw{tk}, value{std::move(value)} {}
     token::Token kw;
-    std::unique_ptr<Expr> value;
+    utility::Scoped<Expr> value;
     create_stmt_visit;
   };
 
   // Loop control statements
   struct Continue: Stmt {
+    Continue(token::Token const &tk): Stmt{}, kw{tk} {}
     token::Token kw;
     create_stmt_visit;
   };
   struct Break: Stmt {
+    Break(token::Token const &tk): Stmt{}, kw{tk} {}
     token::Token kw;
     create_stmt_visit;
   };
 
   // A way to hold multiple nodes
   struct Block: Stmt {
+    Block(token::Token const &lop, token::Token const &rop,
+      std::vector<utility::Scoped<Stmt>> stmts)
+      : Stmt{}, lop{lop}, rop{rop}, statements{std::move(stmts)} {}
     token::Token lop, rop;
-    std::vector<std::unique_ptr<Stmt>> statements;
+    std::vector<utility::Scoped<Stmt>> statements;
     create_stmt_visit;
   };
 
   // Loop statements
   struct For: Stmt {
+    For(token::Token const &tk, utility::Scoped<Expr> bind,
+      utility::Scoped<Block> body)
+      : Stmt{}, kw{tk}, binding{std::move(bind)}, body{std::move(body)} {}
     token::Token kw;
-    std::unique_ptr<Expr> binding;
-    std::unique_ptr<Block> body;
+    utility::Scoped<Expr> binding;
+    utility::Scoped<Block> body;
     create_stmt_visit;
   };
   struct While: Stmt {
+    While(token::Token const &tk, utility::Scoped<Expr> cond,
+      utility::Scoped<Block> body)
+      : Stmt{}, kw{tk}, cond{std::move(cond)}, body{std::move(body)} {}
     token::Token kw;
-    std::unique_ptr<Expr> cond;
-    std::unique_ptr<Block> body;
+    utility::Scoped<Expr> cond;
+    utility::Scoped<Block> body;
     create_stmt_visit;
   };
 
-  // Lonely `else`
-  struct Else: Stmt {
-    token::Token kw;
-    std::unique_ptr<Block> body;
-    create_stmt_visit;
-  };
+  namespace internal {
+    struct Else {
+      Else(token::Token const &tk, utility::Scoped<Block> body)
+        : kw{tk}, body{std::move(body)} {}
+      token::Token kw;
+      utility::Scoped<Block> body;
+    };
+    struct If {
+      If(token::Token const &tk, utility::Scoped<Expr> cond,
+        utility::Scoped<Block> body)
+        : kw{tk}, cond{std::move(cond)}, body{std::move(body)} {}
+      token::Token kw;
+      utility::Scoped<Expr> cond;
+      utility::Scoped<Block> body;
+    };
+  } // namespace internal
 
   // Classic branch statement
   struct If: Stmt {
-    token::Token kw;
-    std::unique_ptr<Expr> cond;
-    std::unique_ptr<Block> body;
-    create_stmt_visit;
-  };
-
-  struct ElseIf: Stmt {
-    token::Token kw_else;
-    std::unique_ptr<If> if_;
-    create_stmt_visit;
-  };
-
-  // IfElse
-  struct IfElse: Stmt {
-    std::unique_ptr<If> if_;
-    std::vector<std::unique_ptr<ElseIf>> else_if_;
-    std::unique_ptr<Else> else_;
+    If(internal::If if_, std::optional<internal::Else> else_)
+      : Stmt{}, if_{std::move(if_)}, else_{std::move(else_)} {}
+    internal::If if_;
+    std::optional<internal::Else> else_;
     create_stmt_visit;
   };
 
   // Nodes that add names to scopes
   struct Def: Stmt {
-    token::Token kw, name;
-    std::unique_ptr<Expr> params;
-    std::unique_ptr<Block> body;
+    Def(token::Token const &tk, utility::Scoped<Expr> name_params,
+      utility::Scoped<Block> body)
+      : Stmt{}, kw{tk}, name_params{std::move(name_params)},
+        body{std::move(body)} {}
+    token::Token kw;
+    utility::Scoped<Expr> name_params;
+    utility::Scoped<Block> body;
     create_stmt_visit;
   }; // Declares a function
 
   struct Class: Stmt {
-    token::Token kw, name;
-    std::unique_ptr<Block> body;
+    Class(token::Token const &tk, utility::Scoped<Expr> name_bases,
+      utility::Scoped<Block> body)
+      : Stmt{}, kw{tk}, name_bases{std::move(name_bases)},
+        body{std::move(body)} {}
+    token::Token kw;
+    utility::Scoped<Expr> name_bases;
+    utility::Scoped<Block> body;
     create_stmt_visit;
   }; // Declares a class
 
   struct Global: Stmt {
+    Global(token::Token const &tk, utility::Scoped<Expr> names)
+      : Stmt{}, kw{tk}, names{std::move(names)} {}
     token::Token kw;
-    std::unique_ptr<Expr> names;
+    utility::Scoped<Expr> names;
     create_stmt_visit;
   }; // Locks a local var with one in global scope of same name
 
   // Locks a local var with one in innermost wrapping,
   // not including global, scopes
   struct Nonlocal: Stmt {
+    Nonlocal(token::Token const &tk, utility::Scoped<Expr> names)
+      : Stmt{}, kw{tk}, names{std::move(names)} {}
     token::Token kw;
-    std::unique_ptr<Expr> names;
+    utility::Scoped<Expr> names;
     create_stmt_visit;
   };
 } // namespace rattle::tree
