@@ -22,7 +22,7 @@ struct LexerReactor: rattle::lexer::IReactor {
   std::vector<rattle::lexer::error::Error> errors;
   LexerReactor(): errors{} {};
 
-  rattle::lexer::OnError report(rattle::lexer::error::Error error) {
+  rattle::lexer::OnError report(rattle::lexer::error::Error error) noexcept {
     errors.push_back(error);
     return rattle::lexer::OnError::Resume;
   }

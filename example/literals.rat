@@ -29,3 +29,10 @@ String Here
 '''what a joke'''
 """
 
+r'''
+Raw string
+with any kind
+of escape
+\z\d\b\n
+'''
+
