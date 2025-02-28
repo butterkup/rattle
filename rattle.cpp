@@ -32,6 +32,10 @@ struct LexerReactor: rattle::lexer::IReactor {
       std::cerr << error << '\n';
     }
   }
+
+  void trace(rattle::token::Token &token) noexcept {
+    std::cout << token << '\n';
+  }
 };
 
 void lex_file(const char *filepath) {
@@ -41,8 +45,7 @@ void lex_file(const char *filepath) {
     LexerReactor reactor;
     rattle::lexer::Lexer lexer{*content, reactor};
     while (not lexer.empty()) {
-      auto token = lexer.lex();
-      std::cout << token << '\n';
+      lexer.lex();
     }
     std::cerr << "-------------[ ERRORS: " << rawpath << " ]-------------\n";
     reactor.show_errors();

@@ -66,7 +66,7 @@ endef
 
 %.cpp.d: %.cpp
 	@echo -n "$$(dirname '$<')/" >$@
-	$(CXX) $(CXXFLAGS) -M $< >>$@
+	$(CXX) $(CXXFLAGS) -MM $< >>$@
 
 .PHONY+=clean_objects
 clean_objects:
