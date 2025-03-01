@@ -7,7 +7,7 @@ namespace rattle {
   // Interface of a lexer type
   struct ILexer {
     // Get the next token
-    [[nodiscard]]
+    [[nodiscard("We don't want to leak tokens, do we?")]]
     virtual token::Token lex() noexcept = 0;
     // Once this returns true, the lexer is assumed
     // to always return `Eot`
@@ -20,7 +20,8 @@ namespace rattle {
       // if there is a faster more efficient way,
       // they are free to override.
       while (not empty()) {
-        (void)lex();
+        // We do!
+        static_cast<void>(lex());
       }
     }
     virtual ~ILexer() = default;

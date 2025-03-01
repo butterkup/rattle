@@ -41,6 +41,7 @@ namespace rattle::lexer::internal {
 
     // Jump to the end of the program.
     void drain_program() noexcept {
+      // NOTE: No more tokens after this call, only `Eot`.
       start.iterator = current.iterator = program.cend();
     }
     // Check if we are at the end of the program.

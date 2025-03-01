@@ -9,7 +9,7 @@ namespace rattle {
     // Should return an empty `Scoped` if parser
     // is empty, otherwise well formed nodes are expected
     // Parse a statement
-    [[nodiscard]]
+    [[nodiscard("We don't want to leak nodes, do we?")]]
     virtual utility::Scoped<tree::Stmt> parse_stmt() noexcept = 0;
     // Can the parser produce more nodes? If token source is not empty
     // more nodes are possible.
@@ -20,7 +20,8 @@ namespace rattle {
       // more efficient draining, as a default, it gets the
       // job done.
       while (not empty()) {
-        (void)parse_stmt();
+        // We do!
+        static_cast<void>(parse_stmt());
       }
     }
     virtual ~IParser() = default;
