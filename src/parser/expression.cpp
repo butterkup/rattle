@@ -3,6 +3,7 @@
 #include <rattle/parser/cursor.hpp>
 #include <rattle/parser/error.hpp>
 #include <rattle/parser/parser.hpp>
+#include <rattle/rattle.hpp>
 #include <rattle/tree/nodes.hpp>
 
 namespace rattle::parser::internal {
@@ -66,6 +67,7 @@ namespace rattle::parser::internal {
 #define rattle_undef_token_macro
 #define rattle_pp_token_macro(kind, _) \
         case token::Kind::kind:          return {{literal,    Prec::primary},   {nullptr,     Prec::none}};
+        rattle_pp_token_macro(Error, _)
 #include <rattle/token/require_pp/primitives.h>
 #include <rattle/token/require_pp/undefine.h>
         default:                         return {{nullptr,    Prec::none},      {nullptr,     Prec::none}};
@@ -105,13 +107,13 @@ namespace rattle::parser::internal {
     static Scoped<tree::Expr> literal(Parser &parser, Prec) noexcept {
       switch (parser.base.iskind()) {
 #define rattle_undef_token_macro
-#define rattle_pp_token_macro(kind, _)                                         \
-  case token::Kind::kind:                                                      \
-    return parser.make<tree::expr::Primary>(parser.base.eat());
+#define rattle_pp_token_macro(kind, _) case token::Kind::kind:
+        rattle_pp_token_macro(Error, _)
 #include <rattle/token/require_pp/primitives.h>
 #include <rattle/token/require_pp/undefine.h>
+          return parser.make<tree::expr::Primary>(parser.base.eat());
       default:
-        assert(false);
+        unreachable();
       }
     }
 
@@ -121,22 +123,22 @@ namespace rattle::parser::internal {
       case token::Kind::Plus: {
         auto op = parser.base.eat();
         auto operand = pratts_parse_expr(parser, prec);
-        return parser.make<tree::expr::Posify>(op, std::move(operand));
+        return parser.make<tree::expr::UnaryExpr>(op, std::move(operand));
       }
       case token::Kind::Minus: {
         auto op = parser.base.eat();
         auto operand = pratts_parse_expr(parser, prec);
-        return parser.make<tree::expr::Negate>(op, std::move(operand));
+        return parser.make<tree::expr::UnaryExpr>(op, std::move(operand));
       }
       case token::Kind::Star: {
         auto op = parser.base.eat();
         auto operand = pratts_parse_expr(parser, prec);
-        return parser.make<tree::expr::Spread>(op, std::move(operand));
+        return parser.make<tree::expr::UnaryExpr>(op, std::move(operand));
       }
       case token::Kind::Not: {
         auto op = parser.base.eat();
         auto operand = pratts_parse_expr(parser, prec);
-        return parser.make<tree::expr::Not>(op, std::move(operand));
+        return parser.make<tree::expr::UnaryExpr>(op, std::move(operand));
       }
       case token::Kind::OpenBracket: {
         auto flags = parser.base.with(State::NEWLINE, State::ALL);
@@ -163,7 +165,7 @@ namespace rattle::parser::internal {
         return parser.make<tree::expr::Group>(op, op2, std::move(operand));
       }
       default:
-        assert(false);
+        unreachable();
       }
     }
 
@@ -185,28 +187,28 @@ namespace rattle::parser::internal {
       switch (parser.base.iskind()) {
       // Left associative
       case token::Kind::Plus:
-        return associativity<token::Kind::Plus, tree::expr::Plus>(
+        return associativity<token::Kind::Plus, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::Minus:
-        return associativity<token::Kind::Minus, tree::expr::Minus>(
+        return associativity<token::Kind::Minus, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::Star:
-        return associativity<token::Kind::Star, tree::expr::Star>(
+        return associativity<token::Kind::Star, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::Slash:
-        return associativity<token::Kind::Slash, tree::expr::Slash>(
+        return associativity<token::Kind::Slash, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::Comma:
-        return associativity<token::Kind::Comma, tree::expr::Comma>(
+        return associativity<token::Kind::Comma, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::And:
-        return associativity<token::Kind::And, tree::expr::And>(
+        return associativity<token::Kind::And, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::Or:
-        return associativity<token::Kind::Or, tree::expr::Or>(
+        return associativity<token::Kind::Or, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       default:
-        assert(false);
+        unreachable();
       }
     }
 
@@ -215,25 +217,25 @@ namespace rattle::parser::internal {
       Parser &parser, Scoped<tree::Expr> left, Prec prec) noexcept {
       switch (parser.base.iskind()) {
       case token::Kind::EqualEqual:
-        return associativity<token::Kind::EqualEqual, tree::expr::EqualEqual>(
+        return associativity<token::Kind::EqualEqual, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::NotEqual:
-        return associativity<token::Kind::NotEqual, tree::expr::NotEqual>(
+        return associativity<token::Kind::NotEqual, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::LessEqual:
-        return associativity<token::Kind::LessEqual, tree::expr::LessEqual>(
+        return associativity<token::Kind::LessEqual, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::LessThan:
-        return associativity<token::Kind::LessThan, tree::expr::LessThan>(
+        return associativity<token::Kind::LessThan, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       case token::Kind::GreaterEqual:
-        return associativity<token::Kind::GreaterEqual,
-          tree::expr::GreaterEqual>(parser, std::move(left), ++prec);
+        return associativity<token::Kind::GreaterEqual, tree::expr::BinaryExpr>(
+          parser, std::move(left), ++prec);
       case token::Kind::GreaterThan:
-        return associativity<token::Kind::GreaterThan, tree::expr::GreaterThan>(
+        return associativity<token::Kind::GreaterThan, tree::expr::BinaryExpr>(
           parser, std::move(left), ++prec);
       default:
-        assert(false);
+        unreachable();
       }
     }
 
@@ -250,7 +252,7 @@ namespace rattle::parser::internal {
             op, op2, std::move(left), std::move(right));
         } else {
           auto right = pratts_parse_expr(parser, prec);
-          return parser.make<tree::expr::Is>(
+          return parser.make<tree::expr::BinaryExpr>(
             op, std::move(left), std::move(right));
         }
       }
@@ -288,7 +290,7 @@ namespace rattle::parser::internal {
           op, op, std::move(left), std::move(cond), std::move(right));
       }
       default:
-        assert(false);
+        unreachable();
       }
     }
 
@@ -298,9 +300,9 @@ namespace rattle::parser::internal {
       switch (parser.base.iskind()) {
       case token::Kind::Dot: {
         auto op = parser.base.eat();
-        auto member = pratts_parse_expr(parser, ++prec);
-        return parser.make<tree::expr::Dot>(
-          op, std::move(left), std::move(member));
+        return parser.make<tree::expr::Dot>(op, std::move(left),
+          parser.base.iskind(token::Kind::Identifier) ? parser.base.eat() :
+                                                        parser.base.peek());
       }
       case token::Kind::OpenBracket: {
         auto flags = parser.base.with(State::NEWLINE, State::ALL);
@@ -329,7 +331,7 @@ namespace rattle::parser::internal {
           op, op2, std::move(left), std::move(arguments));
       }
       default:
-        assert(false);
+        unreachable();
       }
     }
 

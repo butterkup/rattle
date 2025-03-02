@@ -37,43 +37,29 @@ namespace rattle::tree {
 
   namespace expr {
     struct BinaryExpr: Expr {
-      token::Token op;
-      utility::Scoped<Expr> left, right;
       BinaryExpr(token::Token op, utility::Scoped<Expr> left,
         utility::Scoped<Expr> right)
         : op{op}, left{std::move(left)}, right{std::move(right)} {}
+      token::Token op;
+      utility::Scoped<Expr> left, right;
+      create_expr_visit;
     };
 
     struct UnaryExpr: Expr {
-      token::Token op;
-      utility::Scoped<Expr> operand;
       UnaryExpr(token::Token op, utility::Scoped<Expr> operand)
         : op{op}, operand{std::move(operand)} {}
+      token::Token op;
+      utility::Scoped<Expr> operand;
+      create_expr_visit;
     };
 
-    // Auto generate expression nodes:
-    // * binary operators
-#define rattle_undef_token_macro
-#define rattle_pp_token_macro(kind, _)                                         \
-  struct kind: BinaryExpr {                                                    \
-    kind(token::Token op, utility::Scoped<Expr> left,                          \
-      utility::Scoped<Expr> right)                                             \
-      : BinaryExpr{op, std::move(left), std::move(right)} {}                   \
-    create_expr_visit                                                          \
-  };
-#include "require_pp/binary.h"
-#include "require_pp/undefine.h"
-
-    // * unary operators
-#define rattle_undef_token_macro
-#define rattle_pp_token_macro(kind, _)                                         \
-  struct kind: UnaryExpr {                                                     \
-    kind(token::Token op, utility::Scoped<Expr> operand)                       \
-      : UnaryExpr{op, std::move(operand)} {}                                   \
-    create_expr_visit                                                          \
-  };
-#include "require_pp/unary.h"
-#include "require_pp/undefine.h"
+    // Quick way to check if a for loop is valid having an `in` expression
+    struct In: BinaryExpr {
+      // Cannot inherit constructor
+      In(token::Token op, utility::Scoped<Expr> left,
+        utility::Scoped<Expr> right)
+        : BinaryExpr{op, std::move(left), std::move(right)} {}
+    };
 
     // Good old if-else ternary operator: `ontrue if cond else onfalse`
     // It compares to c's conditional operator: `cond ? ontrue : onfalse`
@@ -121,6 +107,14 @@ namespace rattle::tree {
           params{std::move(params)} {}
       token::Token lparen, rparen;
       utility::Scoped<Expr> callable, params;
+      create_expr_visit;
+    };
+    struct Dot: Expr {
+      Dot(token::Token const &dot, utility::Scoped<Expr> expr,
+        token::Token const &member)
+        : dot(dot), member(member), expr(std::move(expr)) {}
+      token::Token dot, member;
+      utility::Scoped<Expr> expr;
       create_expr_visit;
     };
     struct IsNot: Expr {

@@ -27,7 +27,7 @@ namespace rattle::tree::visitor {
 
   // Knowing what kind of expression a node represents is
   // highly useful for the analyzer, so we will implement one.
-  struct ExprKindResolver: ExprVisitor {
+  struct ExprKindResolver: private ExprVisitor {
     // This class is only meant to provide `resolve`, since it
     // initializes `kind` in a well defined manner, this contraption is safe.
     ExprKindResolver(): kind{static_cast<kinds::Expression>(0)} {}
