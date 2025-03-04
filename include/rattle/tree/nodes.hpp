@@ -45,14 +45,6 @@ namespace rattle::tree {
       create_expr_visit;
     };
 
-    struct UnaryExpr: Expr {
-      UnaryExpr(token::Token op, utility::Scoped<Expr> operand)
-        : op{op}, operand{std::move(operand)} {}
-      token::Token op;
-      utility::Scoped<Expr> operand;
-      create_expr_visit;
-    };
-
     // Quick way to check if a for loop is valid having an `in` expression
     struct In: BinaryExpr {
       // Cannot inherit constructor
@@ -61,78 +53,19 @@ namespace rattle::tree {
         : BinaryExpr{op, std::move(left), std::move(right)} {}
     };
 
-    // Good old if-else ternary operator: `ontrue if cond else onfalse`
-    // It compares to c's conditional operator: `cond ? ontrue : onfalse`
-    struct IfElse: Expr {
-      IfElse(token::Token const &kw_if, token::Token const &kw_else,
-        utility::Scoped<Expr> ontrue, utility::Scoped<Expr> cond,
-        utility::Scoped<Expr> onfalse)
-        : Expr{}, kw_if{kw_if}, kw_else{kw_else}, ontrue{std::move(ontrue)},
-          cond{std::move(cond)}, onfalse{std::move(onfalse)} {}
-      token::Token kw_if, kw_else;
-      utility::Scoped<Expr> ontrue, cond, onfalse;
-      create_expr_visit;
-    };
-
-    // Direct values; literals.
-    struct Primary: Expr {
-      Primary(token::Token const &value): Expr{}, value{value} {}
+    struct Literal: Expr {
+      Literal(token::Token const &value): Expr{}, value{value} {}
       token::Token value;
       create_expr_visit;
     };
 
-    // Group expression also represents a tuple depending on held expr
-    struct Group: Expr {
-      Group(token::Token const &lparen, token::Token const &rparen,
-        utility::Scoped<Expr> expr)
-        : Expr{}, lparen{lparen}, rparen{rparen}, expr{std::move(expr)} {}
-      token::Token lparen, rparen;
-      utility::Scoped<Expr> expr;
-      create_expr_visit;
-    };
-    // Anonymous function; syntax (|arg1, arg2| (3*arg1 + arg2) - 100)(50, 30) == 80
-    struct Lambda: Expr {
-      Lambda(token::Token const &lbar, token::Token const &rbar,
-        utility::Scoped<Expr> params, utility::Scoped<Expr> body)
-        : Expr{}, lbar{lbar}, rbar{rbar}, params{std::move(params)},
-          body{std::move(body)} {}
-      token::Token lbar, rbar;
-      utility::Scoped<Expr> params, body;
-    };
-    // Call expression; also holds subscript.
-    struct Call: Expr {
-      Call(token::Token const &lparen, token::Token const &rparen,
-        utility::Scoped<Expr> callable, utility::Scoped<Expr> params)
-        : Expr{}, lparen{lparen}, rparen{rparen}, callable{std::move(callable)},
-          params{std::move(params)} {}
-      token::Token lparen, rparen;
-      utility::Scoped<Expr> callable, params;
-      create_expr_visit;
-    };
-    struct Dot: Expr {
-      Dot(token::Token const &dot, utility::Scoped<Expr> expr,
-        token::Token const &member)
-        : dot(dot), member(member), expr(std::move(expr)) {}
-      token::Token dot, member;
-      utility::Scoped<Expr> expr;
-      create_expr_visit;
-    };
-    struct IsNot: Expr {
-      IsNot(token::Token const &is_, token::Token const &not_,
-        utility::Scoped<Expr> left, utility::Scoped<Expr> right)
-        : is_{is_}, not_{not_}, left{std::move(left)}, right{std::move(right)} {
-      }
-      token::Token is_, not_;
-      utility::Scoped<Expr> left, right;
-      create_expr_visit;
-    };
-    struct NotIn: Expr {
-      NotIn(token::Token const &not_, token::Token const &in_,
-        utility::Scoped<Expr> left, utility::Scoped<Expr> right)
-        : not_{not_}, in_{in_}, left{std::move(left)}, right{std::move(right)} {
-      }
-      token::Token not_, in_;
-      utility::Scoped<Expr> left, right;
+    struct BiExprBiTk: Expr {
+      BiExprBiTk(token::Token const &tk1, token::Token const &tk2,
+        utility::Scoped<Expr> expr1, utility::Scoped<Expr> expr2)
+        : Expr{}, tk1{tk1}, tk2{tk2}, expr1{std::move(expr1)},
+          expr2{std::move(expr2)} {}
+      token::Token tk1, tk2;
+      utility::Scoped<Expr> expr1, expr2;
       create_expr_visit;
     };
   } // namespace expr
@@ -154,28 +87,14 @@ namespace rattle::tree {
     create_stmt_visit;
   };
 
-  // Return a value from a function
-  struct Return: Stmt {
-    Return(token::Token const &tk, utility::Scoped<Expr> value)
-      : Stmt{}, kw{tk}, value{std::move(value)} {}
-    token::Token kw;
-    utility::Scoped<Expr> value;
+  struct TkExpr: Stmt {
+    TkExpr(token::Token const &tk, utility::Scoped<Expr> expr)
+      : tk{tk}, expr{std::move(expr)} {}
+    token::Token tk;
+    utility::Scoped<Expr> expr;
     create_stmt_visit;
   };
 
-  // Loop control statements
-  struct Continue: Stmt {
-    Continue(token::Token const &tk): Stmt{}, kw{tk} {}
-    token::Token kw;
-    create_stmt_visit;
-  };
-  struct Break: Stmt {
-    Break(token::Token const &tk): Stmt{}, kw{tk} {}
-    token::Token kw;
-    create_stmt_visit;
-  };
-
-  // A way to hold multiple nodes
   struct Block: Stmt {
     Block(token::Token const &lop, token::Token const &rop,
       std::vector<utility::Scoped<Stmt>> stmts)
@@ -185,23 +104,13 @@ namespace rattle::tree {
     create_stmt_visit;
   };
 
-  // Loop statements
-  struct For: Stmt {
-    For(token::Token const &tk, utility::Scoped<Expr> bind,
-      utility::Scoped<Block> body)
-      : Stmt{}, kw{tk}, binding{std::move(bind)}, body{std::move(body)} {}
-    token::Token kw;
-    utility::Scoped<Expr> binding;
-    utility::Scoped<Block> body;
-    create_stmt_visit;
-  };
-  struct While: Stmt {
-    While(token::Token const &tk, utility::Scoped<Expr> cond,
-      utility::Scoped<Block> body)
-      : Stmt{}, kw{tk}, cond{std::move(cond)}, body{std::move(body)} {}
-    token::Token kw;
-    utility::Scoped<Expr> cond;
-    utility::Scoped<Block> body;
+  struct TkExprBlock: Stmt {
+    TkExprBlock(token::Token const &tk, utility::Scoped<Expr> expr,
+      utility::Scoped<Block> block)
+      : tk{tk}, expr{std::move(expr)}, block{std::move(block)} {}
+    token::Token tk;
+    utility::Scoped<Expr> expr;
+    utility::Scoped<Block> block;
     create_stmt_visit;
   };
 
@@ -228,47 +137,6 @@ namespace rattle::tree {
       : Stmt{}, if_{std::move(if_)}, else_{std::move(else_)} {}
     internal::If if_;
     std::optional<internal::Else> else_;
-    create_stmt_visit;
-  };
-
-  // Nodes that add names to scopes
-  struct Def: Stmt {
-    Def(token::Token const &tk, utility::Scoped<Expr> name_params,
-      utility::Scoped<Block> body)
-      : Stmt{}, kw{tk}, name_params{std::move(name_params)},
-        body{std::move(body)} {}
-    token::Token kw;
-    utility::Scoped<Expr> name_params;
-    utility::Scoped<Block> body;
-    create_stmt_visit;
-  }; // Declares a function
-
-  struct Class: Stmt {
-    Class(token::Token const &tk, utility::Scoped<Expr> name_bases,
-      utility::Scoped<Block> body)
-      : Stmt{}, kw{tk}, name_bases{std::move(name_bases)},
-        body{std::move(body)} {}
-    token::Token kw;
-    utility::Scoped<Expr> name_bases;
-    utility::Scoped<Block> body;
-    create_stmt_visit;
-  }; // Declares a class
-
-  struct Global: Stmt {
-    Global(token::Token const &tk, utility::Scoped<Expr> names)
-      : Stmt{}, kw{tk}, names{std::move(names)} {}
-    token::Token kw;
-    utility::Scoped<Expr> names;
-    create_stmt_visit;
-  }; // Locks a local var with one in global scope of same name
-
-  // Locks a local var with one in innermost wrapping,
-  // not including global, scopes
-  struct Nonlocal: Stmt {
-    Nonlocal(token::Token const &tk, utility::Scoped<Expr> names)
-      : Stmt{}, kw{tk}, names{std::move(names)} {}
-    token::Token kw;
-    utility::Scoped<Expr> names;
     create_stmt_visit;
   };
 } // namespace rattle::tree

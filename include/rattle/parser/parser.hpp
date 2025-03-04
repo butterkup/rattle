@@ -77,12 +77,12 @@ namespace rattle::parser {
       IReactor &reactor;
       Scoped<tree::Block> parse_block() noexcept;
       Scoped<tree::If> parse_if() noexcept;
-      Scoped<tree::Def> parse_def() noexcept;
-      Scoped<tree::Class> parse_class() noexcept;
+      Scoped<tree::TkExprBlock> parse_def() noexcept;
+      Scoped<tree::TkExprBlock> parse_class() noexcept;
       Scoped<tree::Expr> parse_expression() noexcept;
       Scoped<tree::Stmt> parse_statement() noexcept;
-      Scoped<tree::For> parse_for() noexcept;
-      Scoped<tree::While> parse_while() noexcept;
+      Scoped<tree::TkExprBlock> parse_for() noexcept;
+      Scoped<tree::TkExprBlock> parse_while() noexcept;
       Scoped<tree::Stmt> parse_assignment() noexcept;
       token::Token parse_eos() noexcept;
     };
