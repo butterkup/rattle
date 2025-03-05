@@ -59,32 +59,36 @@ namespace rattle::parser::internal {
 #define optional_parse_block()                                                 \
   base.iskind(token::Kind::OpenBrace) ? parse_block() : nullptr
 
-  Scoped<tree::For> Parser::parse_for() noexcept {
+  Scoped<tree::TkExprBlock> Parser::parse_for() noexcept {
     assert(base.iskind(token::Kind::For));
     auto kw = base.eat();
     auto binding = parse_expression();
-    return make<tree::For>(kw, std::move(binding), optional_parse_block());
+    return make<tree::TkExprBlock>(
+      kw, std::move(binding), optional_parse_block());
   }
 
-  Scoped<tree::While> Parser::parse_while() noexcept {
+  Scoped<tree::TkExprBlock> Parser::parse_while() noexcept {
     assert(base.iskind(token::Kind::While));
     auto kw = base.eat();
     auto binding = parse_expression();
-    return make<tree::While>(kw, std::move(binding), optional_parse_block());
+    return make<tree::TkExprBlock>(
+      kw, std::move(binding), optional_parse_block());
   }
 
-  Scoped<tree::Def> Parser::parse_def() noexcept {
+  Scoped<tree::TkExprBlock> Parser::parse_def() noexcept {
     assert(base.iskind(token::Kind::Def));
     auto kw = base.eat();
     auto name_params = parse_expression();
-    return make<tree::Def>(kw, std::move(name_params), optional_parse_block());
+    return make<tree::TkExprBlock>(
+      kw, std::move(name_params), optional_parse_block());
   }
 
-  Scoped<tree::Class> Parser::parse_class() noexcept {
+  Scoped<tree::TkExprBlock> Parser::parse_class() noexcept {
     assert(base.iskind(token::Kind::Class));
     auto kw = base.eat();
     auto name_bases = parse_expression();
-    return make<tree::Class>(kw, std::move(name_bases), optional_parse_block());
+    return make<tree::TkExprBlock>(
+      kw, std::move(name_bases), optional_parse_block());
   }
 
   Scoped<tree::If> Parser::parse_if() noexcept {
