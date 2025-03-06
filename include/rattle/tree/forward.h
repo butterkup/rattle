@@ -24,7 +24,6 @@ namespace rattle::tree {
     // Forward declare visitor base classes and expr kind resolver
     struct StmtVisitor;
     struct ExprVisitor;
-    struct ExprKindResolver;
   } // namespace visitor
 } // namespace rattle::tree
 

@@ -91,7 +91,7 @@ namespace rattle::parser {
   struct Parser: IParser {
     Parser(ILexer &lexer, IReactor &reactor): parser{lexer, reactor} {}
 
-    [[nodiscard]] utility::Scoped<tree::Stmt> parse_stmt() noexcept override {
+    [[nodiscard]] utility::Scoped<tree::Node> parse() noexcept override {
       return parser.parse_stmt();
     }
     bool empty() const noexcept override { return parser.empty(); }

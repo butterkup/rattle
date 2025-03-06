@@ -1,7 +1,6 @@
 #pragma once
 
 #include "api.hpp"
-#include "nodes_kinds.h"
 #include <cassert>
 #include <optional>
 #include <rattle/lexer.hpp>
@@ -13,7 +12,6 @@
 namespace rattle::tree {
   // An interface all nodes must present
   struct Node {
-    virtual kinds::Node node_kind() const { return kinds::Node::None; }
     virtual ~Node() = default;
   };
 
@@ -21,13 +19,11 @@ namespace rattle::tree {
   // * Represent expression nodes
   struct Expr: Node {
     virtual void visit(visitor::ExprVisitor &) = 0;
-    kinds::Node node_kind() const override { return kinds::Node::Expression; }
   };
 
   // * Represent statement nodes
   struct Stmt: Node {
     virtual void visit(visitor::StmtVisitor &) = 0;
-    kinds::Node node_kind() const override { return kinds::Node::Statement; }
   };
 
 #define create_visit(Visitor)                                                  \
@@ -116,10 +112,10 @@ namespace rattle::tree {
 
   namespace internal {
     struct Else {
-      Else(token::Token const &tk, utility::Scoped<Block> body)
+      Else(token::Token const &tk, utility::Scoped<Stmt> body)
         : kw{tk}, body{std::move(body)} {}
       token::Token kw;
-      utility::Scoped<Block> body;
+      utility::Scoped<Stmt> body;
     };
     struct If {
       If(token::Token const &tk, utility::Scoped<Expr> cond,
