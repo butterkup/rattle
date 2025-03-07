@@ -17,7 +17,7 @@ namespace rattle::tree::visitor {
   // Statement visitor
   struct StmtVisitor {
 #define rattle_undef_token_macro
-#define rattle_pp_token_macro(Type, _) create_visitor(Type);
+#define rattle_pp_token_macro(Type, _) create_visitor(stmt::Type);
 #include "require_pp/statement.h"
 #include "require_pp/undefine.h"
     virtual ~StmtVisitor() = default;

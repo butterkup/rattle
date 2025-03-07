@@ -75,14 +75,14 @@ namespace rattle::parser {
 
     private:
       IReactor &reactor;
-      Scoped<tree::Block> parse_block() noexcept;
-      Scoped<tree::If> parse_if() noexcept;
-      Scoped<tree::TkExprBlock> parse_def() noexcept;
-      Scoped<tree::TkExprBlock> parse_class() noexcept;
+      Scoped<tree::stmt::Block> parse_block() noexcept;
+      Scoped<tree::stmt::If> parse_if() noexcept;
+      Scoped<tree::stmt::TkExprBlock> parse_def() noexcept;
+      Scoped<tree::stmt::TkExprBlock> parse_class() noexcept;
+      Scoped<tree::stmt::TkExprBlock> parse_for() noexcept;
+      Scoped<tree::stmt::TkExprBlock> parse_while() noexcept;
       Scoped<tree::Expr> parse_expression() noexcept;
       Scoped<tree::Stmt> parse_statement() noexcept;
-      Scoped<tree::TkExprBlock> parse_for() noexcept;
-      Scoped<tree::TkExprBlock> parse_while() noexcept;
       Scoped<tree::Stmt> parse_assignment() noexcept;
       token::Token parse_eos() noexcept;
     };
@@ -91,7 +91,7 @@ namespace rattle::parser {
   struct Parser: IParser {
     Parser(ILexer &lexer, IReactor &reactor): parser{lexer, reactor} {}
 
-    [[nodiscard]] utility::Scoped<tree::Node> parse() noexcept override {
+    [[nodiscard]] utility::Scoped<tree::Stmt> parse() noexcept override {
       return parser.parse_stmt();
     }
     bool empty() const noexcept override { return parser.empty(); }

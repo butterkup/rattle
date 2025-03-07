@@ -33,7 +33,7 @@ namespace rattle::parser::internal {
     }
   }
 
-  Scoped<tree::Block> Parser::parse_block() noexcept {
+  Scoped<tree::stmt::Block> Parser::parse_block() noexcept {
     assert(base.iskind(token::Kind::OpenBrace));
     auto lbrace = base.eat();
     std::vector<Scoped<tree::Stmt>> stmts;
@@ -49,7 +49,7 @@ namespace rattle::parser::internal {
         // Malformed block statement, but okay for analysable.
         base.report(error::Kind::unterminated_brace, lbrace);
       case token::Kind::CloseBrace:
-        return make<tree::Block>(lbrace, base.eat(), std::move(stmts));
+        return make<tree::stmt::Block>(lbrace, base.eat(), std::move(stmts));
       default:
         assert(false); // Not reacheable!
       }
@@ -59,51 +59,51 @@ namespace rattle::parser::internal {
 #define optional_parse_block()                                                 \
   base.iskind(token::Kind::OpenBrace) ? parse_block() : nullptr
 
-  Scoped<tree::TkExprBlock> Parser::parse_for() noexcept {
+  Scoped<tree::stmt::TkExprBlock> Parser::parse_for() noexcept {
     assert(base.iskind(token::Kind::For));
     auto kw = base.eat();
     auto binding = parse_expression();
-    return make<tree::TkExprBlock>(
+    return make<tree::stmt::TkExprBlock>(
       kw, std::move(binding), optional_parse_block());
   }
 
-  Scoped<tree::TkExprBlock> Parser::parse_while() noexcept {
+  Scoped<tree::stmt::TkExprBlock> Parser::parse_while() noexcept {
     assert(base.iskind(token::Kind::While));
     auto kw = base.eat();
     auto binding = parse_expression();
-    return make<tree::TkExprBlock>(
+    return make<tree::stmt::TkExprBlock>(
       kw, std::move(binding), optional_parse_block());
   }
 
-  Scoped<tree::TkExprBlock> Parser::parse_def() noexcept {
+  Scoped<tree::stmt::TkExprBlock> Parser::parse_def() noexcept {
     assert(base.iskind(token::Kind::Def));
     auto kw = base.eat();
     auto name_params = parse_expression();
-    return make<tree::TkExprBlock>(
+    return make<tree::stmt::TkExprBlock>(
       kw, std::move(name_params), optional_parse_block());
   }
 
-  Scoped<tree::TkExprBlock> Parser::parse_class() noexcept {
+  Scoped<tree::stmt::TkExprBlock> Parser::parse_class() noexcept {
     assert(base.iskind(token::Kind::Class));
     auto kw = base.eat();
     auto name_bases = parse_expression();
-    return make<tree::TkExprBlock>(
+    return make<tree::stmt::TkExprBlock>(
       kw, std::move(name_bases), optional_parse_block());
   }
 
-  Scoped<tree::If> Parser::parse_if() noexcept {
+  Scoped<tree::stmt::If> Parser::parse_if() noexcept {
     assert(base.iskind(token::Kind::If));
     auto kw = base.eat();
     auto cond = parse_expression();
     auto block = optional_parse_block();
-    tree::internal::If if_{kw, std::move(cond), std::move(block)};
-    std::optional<tree::internal::Else> else_ = std::nullopt;
+    tree::stmt::internal::If if_{kw, std::move(cond), std::move(block)};
+    std::optional<tree::stmt::internal::Else> else_ = std::nullopt;
     if (base.iskind(token::Kind::Else)) {
       auto kw2 = base.eat();
       auto block2 = optional_parse_block();
       else_.emplace(kw2, std::move(block));
     }
-    return make<tree::If>(std::move(if_), std::move(else_));
+    return make<tree::stmt::If>(std::move(if_), std::move(else_));
   }
 
   Scoped<tree::Stmt> Parser::parse_assignment() noexcept {
@@ -115,14 +115,14 @@ namespace rattle::parser::internal {
     default:
       if (left) {
         parse_eos();
-        return make<tree::ExprStmt>(std::move(left));
+        return make<tree::stmt::ExprStmt>(std::move(left));
       } else {
         return nullptr;
       }
     }
     auto op = base.eat();
     auto right = parse_expression();
-    return make<tree::Assignment>(op, std::move(left), std::move(right));
+    return make<tree::stmt::Assignment>(op, std::move(left), std::move(right));
   }
 } // namespace rattle::parser::internal
 

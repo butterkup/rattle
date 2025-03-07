@@ -13,7 +13,7 @@ namespace rattle {
     // node of the same meaning although unnecessary details are
     // stripped and any semantic errors reported.
     [[nodiscard("We don't want to discard AST nodes, do we?")]]
-    virtual utility::Scoped<ast::Node> analyze(utility::Scoped<tree::Node>) = 0;
+    virtual utility::Scoped<ast::Stmt> analyze(utility::Scoped<tree::Stmt>) = 0;
     virtual ~IAnalyzer() = default;
   };
 } // namespace rattle

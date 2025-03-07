@@ -24,30 +24,30 @@ namespace rattle::parser::internal {
       case token::Kind::Continue: {
         auto kw = base.eat();
         parse_eos();
-        return make<tree::TkExpr>(kw, nullptr);
+        return make<tree::stmt::TkExpr>(kw, nullptr);
       }
       case token::Kind::Break: {
         auto kw = base.eat();
         parse_eos();
-        return make<tree::TkExpr>(kw, nullptr);
+        return make<tree::stmt::TkExpr>(kw, nullptr);
       }
       case token::Kind::Return: {
         auto kw = base.eat();
         auto value = parse_expression();
         parse_eos();
-        return make<tree::TkExpr>(kw, std::move(value));
+        return make<tree::stmt::TkExpr>(kw, std::move(value));
       }
       case token::Kind::Nonlocal: {
         auto kw = base.eat();
         auto names = parse_expression();
         parse_eos();
-        return make<tree::TkExpr>(kw, std::move(names));
+        return make<tree::stmt::TkExpr>(kw, std::move(names));
       }
       case token::Kind::Global: {
         auto kw = base.eat();
         auto names = parse_expression();
         parse_eos();
-        return make<tree::TkExpr>(kw, std::move(names));
+        return make<tree::stmt::TkExpr>(kw, std::move(names));
       }
       case token::Kind::OpenBrace:
         return parse_block();
