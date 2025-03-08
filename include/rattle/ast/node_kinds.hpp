@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rattle/utility.hpp"
+#include <rattle/utility.hpp>
 #include <rattle/tree/nodes.hpp>
 
 namespace rattle::ast::kinds {
@@ -10,7 +10,7 @@ namespace rattle::ast::kinds {
   enum class Binding { Name, Capture };
   enum class Sequence { Tuple, List };
   enum class LoopControl { Continue, Break };
-  enum class Resolve { Nonlocal, Global, Return };
+  enum class Command { Nonlocal, Global, Return };
 
 #define rattle_pp_token_macro(Kind, _) Kind,
   enum class Assignment {

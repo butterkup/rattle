@@ -1,6 +1,7 @@
 #include "../ensure_def.h"
 
 // clang-format off
+rattle_pp_token_macro(Comma, "a,b")
 rattle_pp_token_macro(Add, "a+b")
 rattle_pp_token_macro(Subtract, "a-b")
 rattle_pp_token_macro(Divide, "a/b")
@@ -12,4 +13,11 @@ rattle_pp_token_macro(Is, "expr1 is expr2")
 rattle_pp_token_macro(IsNot, "expr1 is not expr2")
 rattle_pp_token_macro(In, "expr in seq")
 rattle_pp_token_macro(NotIn, "expr not in seq")
-
+rattle_pp_token_macro(CmpEQ, "a==b")
+rattle_pp_token_macro(CmpNE, "a!=b")
+rattle_pp_token_macro(CmpLT, "a<b")
+rattle_pp_token_macro(CmpLE, "a<=b")
+rattle_pp_token_macro(CmpGT, "a>b")
+rattle_pp_token_macro(CmpGE, "a>=b")
+rattle_pp_token_macro(LogicAND, "a and b")
+rattle_pp_token_macro(LogicOR, "a or b")

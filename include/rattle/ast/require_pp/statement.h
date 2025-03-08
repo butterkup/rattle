@@ -9,7 +9,6 @@ rattle_pp_token_macro(For, "")
 rattle_pp_token_macro(Class, "")
 rattle_pp_token_macro(ExprStmt, "")
 rattle_pp_token_macro(Assignment, "")
-rattle_pp_token_macro(Resolve, "")
+rattle_pp_token_macro(Command, "")
 rattle_pp_token_macro(If, "")
-rattle_pp_token_macro(Return, "")
 
