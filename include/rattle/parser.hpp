@@ -20,8 +20,7 @@ namespace rattle {
       // more efficient draining, as a default, it gets the
       // job done.
       while (not empty()) {
-        // We do!
-        static_cast<void>(parse());
+        static_cast<void>(parse()); // We do!
       }
     }
     virtual ~IParser() = default;

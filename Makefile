@@ -39,7 +39,7 @@ preprocess: $(PREPROCESS)
 
 $(DEPMK): $(DEPS)
 	@for file in $(DEPS); do \
-		echo >>$@ "include $$file"; \
+		echo >>$@ "-include $$file"; \
 	done
 
 .PHONY+=deps
@@ -93,5 +93,5 @@ clean_deps:
 clean: clean_objects clean_program clean_preprocess
 
 .PHONY+=clean_all
-clean_all: clean clean_deps
+clean_all: clean_deps clean
 

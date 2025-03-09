@@ -20,8 +20,7 @@ namespace rattle {
       // if there is a faster more efficient way,
       // they are free to override.
       while (not empty()) {
-        // We do!
-        static_cast<void>(lex());
+        static_cast<void>(lex()); // We do!
       }
     }
     virtual ~ILexer() = default;
