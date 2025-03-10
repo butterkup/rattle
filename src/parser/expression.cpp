@@ -277,7 +277,7 @@ namespace rattle::parser::internal {
       case token::Kind::In: {
         auto op = parser.base.eat();
         auto right = pratts_parse_expr(parser, prec);
-        return parser.make<tree::expr::In>(
+        return parser.make<tree::expr::BinaryExpr>(
           op, std::move(left), std::move(right));
       }
       case token::Kind::If: {
@@ -310,10 +310,8 @@ namespace rattle::parser::internal {
       switch (parser.base.iskind()) {
       case token::Kind::Dot: {
         auto op = parser.base.eat();
-        return parser.make<tree::expr::BinaryExpr>(op, std::move(left),
-          parser.make<tree::expr::Literal>(
-            parser.base.iskind(token::Kind::Identifier) ? parser.base.eat() :
-                                                          parser.base.peek()));
+        return parser.make<tree::expr::BinaryExpr>(
+          op, std::move(left), pratts_parse_expr(parser, Prec::primary));
       }
       case token::Kind::OpenBracket: {
         auto flags = parser.base.with(State::NEWLINE, State::ALL);

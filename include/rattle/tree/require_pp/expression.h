@@ -2,10 +2,11 @@
 
 // clang-format off
 
-// Also captures `UnaryExpr` if arg1 is nullptr, the analyzer
-// should report an error if an operator is a binary operator
-// lacking its left operand.
+// Represent unary expressions
+rattle_pp_token_macro(UnaryExpr, "op arg1")
+// Represent binary expressions
 rattle_pp_token_macro(BinaryExpr, "arg1 op arg2")
+// Represent literal values
 rattle_pp_token_macro(Literal, "literal")
 /* Capture all expressions representable with 2 expressions and 2 tokens. Examples:
   * call expression `expr1(expr2)`
@@ -16,8 +17,6 @@ rattle_pp_token_macro(Literal, "literal")
   * if-else `expr11 if expr12 else expr2` in which expr1 is the binary expression `expr1 if expr2`
 */
 rattle_pp_token_macro(BiExprBiTk, "tk1 tk2 expr1 expr2")
-// Help validate for loop syntax; should inherit `BinaryExpr`, not special, just first class check.
-rattle_pp_token_macro(In, "item in seq")
 
 // clang-format on
 

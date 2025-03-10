@@ -19,33 +19,34 @@ namespace rattle::tree {
   // Main types of nodes; they may also expose APIs
   // * Represent expression nodes
   struct Expr: Node {
-    virtual void visit(visitor::ExprVisitor &) noexcept = 0;
+    virtual void visit(visitor::Expression &) noexcept = 0;
   };
 
   // * Represent statement nodes
   struct Stmt: Node {
-    virtual void visit(visitor::StmtVisitor &) noexcept = 0;
+    virtual void visit(visitor::Statement &) noexcept = 0;
   };
 
 #define create_visit(Visitor)                                                  \
   void visit(Visitor &visitor) noexcept override { visitor.visit(*this); }
-#define create_stmt_visit create_visit(visitor::StmtVisitor)
-#define create_expr_visit create_visit(visitor::ExprVisitor)
+#define create_stmt_visit create_visit(visitor::Statement)
+#define create_expr_visit create_visit(visitor::Expression)
 
   namespace expr {
+    struct UnaryExpr: Expr {
+      UnaryExpr(token::Token op, Scoped<Expr> operand)
+        : op{op}, operand{std::move(operand)} {}
+      token::Token op;
+      Scoped<Expr> operand;
+      create_expr_visit;
+    };
+
     struct BinaryExpr: Expr {
       BinaryExpr(token::Token op, Scoped<Expr> left, Scoped<Expr> right)
         : op{op}, left{std::move(left)}, right{std::move(right)} {}
       token::Token op;
       Scoped<Expr> left, right;
       create_expr_visit;
-    };
-
-    // Quick way to check if a for loop is valid having an `in` expression
-    struct In: BinaryExpr {
-      // Cannot inherit constructor
-      In(token::Token op, Scoped<Expr> left, Scoped<Expr> right)
-        : BinaryExpr{op, std::move(left), std::move(right)} {}
     };
 
     struct Literal: Expr {
@@ -136,6 +137,6 @@ namespace rattle::tree {
   } // namespace stmt
 #undef create_visit
 #undef create_stmt_visit
-#undef create_visit
+#undef create_expr_visit
 } // namespace rattle::tree
 

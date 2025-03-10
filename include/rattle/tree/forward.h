@@ -23,8 +23,8 @@ namespace rattle::tree {
 
   namespace visitor {
     // Forward declare visitor base classes and expr kind resolver
-    struct StmtVisitor;
-    struct ExprVisitor;
+    struct Statement;
+    struct Expression;
   } // namespace visitor
 } // namespace rattle::tree
 
