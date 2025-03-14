@@ -37,7 +37,7 @@ namespace rattle::analyzer::syntax {
   }
 
   void StatementAnalyzer::visit(tree::stmt::Block &stmt) noexcept {
-    std::vector<Scoped<ast::Stmt>> stmts;
+    std::vector<Scoped<ast::Stmt>> stmts(stmt.statements.size());
     for (auto &stmt : stmt.statements) {
       stmts.push_back(analyze(*stmt));
     }

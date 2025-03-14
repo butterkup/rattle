@@ -100,7 +100,12 @@ namespace rattle::parser::internal {
     std::optional<tree::stmt::internal::Else> else_ = std::nullopt;
     if (base.iskind(token::Kind::Else)) {
       auto kw2 = base.eat();
-      auto block2 = optional_parse_block();
+      Scoped<tree::Stmt> block2;
+      if (base.iskind(token::Kind::If)) {
+        block2 = parse_if();
+      } else if (base.iskind(token::Kind::OpenBrace)) {
+        block2 = parse_block();
+      }
       else_.emplace(kw2, std::move(block));
     }
     return make<tree::stmt::If>(std::move(if_), std::move(else_));
