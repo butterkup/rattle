@@ -7,12 +7,14 @@
 #include <rattle/token/token.hpp>
 #include <rattle/utility.hpp>
 #include <utility>
-#include <vector>
 
 namespace rattle::tree {
   using utility::Scoped;
   // An interface all nodes must present
   struct Node {
+    // Let nodes have trivial destructors if possible,
+    // this way, any double deestructions will not be
+    // weird and error prone.
     virtual ~Node() = default;
   };
 
@@ -91,50 +93,24 @@ namespace rattle::tree {
       create_stmt_visit;
     };
 
-    struct Block: Stmt {
-      Block(token::Token const &lop, token::Token const &rop,
-        std::vector<Scoped<Stmt>> stmts)
-        : Stmt{}, lop{lop}, rop{rop}, statements{std::move(stmts)} {}
-      token::Token lop, rop;
-      std::vector<Scoped<Stmt>> statements;
+    struct Event: Stmt {
+      enum class Kind { ScopeBegin, ScopeEnd };
+      Event(Kind kind, token::Token const &at): at{at}, kind{kind} {}
+      token::Token at;
+      Kind kind;
       create_stmt_visit;
     };
 
-    struct TkExprBlock: Stmt {
-      TkExprBlock(
-        token::Token const &tk, Scoped<Expr> expr, Scoped<Block> block)
+    struct TkExprStmt: Stmt {
+      TkExprStmt(token::Token const &tk, Scoped<Expr> expr, Scoped<Stmt> block)
         : tk{tk}, expr{std::move(expr)}, block{std::move(block)} {}
       token::Token tk;
       Scoped<Expr> expr;
-      Scoped<Block> block;
-      create_stmt_visit;
-    };
-
-    namespace internal {
-      struct Else {
-        Else(token::Token const &tk, Scoped<Stmt> body)
-          : kw{tk}, body{std::move(body)} {}
-        token::Token kw;
-        Scoped<Stmt> body;
-      };
-      struct If {
-        If(token::Token const &tk, Scoped<Expr> cond, Scoped<Block> body)
-          : kw{tk}, cond{std::move(cond)}, body{std::move(body)} {}
-        token::Token kw;
-        Scoped<Expr> cond;
-        Scoped<Block> body;
-      };
-    } // namespace internal
-
-    // Classic branch statement
-    struct If: Stmt {
-      If(internal::If if_, std::optional<internal::Else> else_)
-        : Stmt{}, if_{std::move(if_)}, else_{std::move(else_)} {}
-      internal::If if_;
-      std::optional<internal::Else> else_;
+      Scoped<Stmt> block;
       create_stmt_visit;
     };
   } // namespace stmt
+
 #undef create_visit
 #undef create_stmt_visit
 #undef create_expr_visit

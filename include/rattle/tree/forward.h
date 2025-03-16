@@ -12,13 +12,11 @@ namespace rattle::tree {
     // Forward declare statement nodes
 #define rattle_pp_token_macro(kind, _) struct kind;
 #include "require_pp/statement.h"
-#include "require_pp/undefine.h"
   } // namespace stmt
   namespace expr {
     // Forward declare expression nodes
-#define rattle_undef_token_macro
 #include "require_pp/expression.h"
-#include "require_pp/undefine.h"
+#undef rattle_pp_token_macro
   } // namespace expr
 
   namespace visitor {
