@@ -13,21 +13,20 @@ namespace rattle::lexer {
     // Acts highly of the state, managers the cursor.
     struct Lexer {
       Lexer(std::string_view program, IReactor &reactor)
-        : base{program, reactor} {}
+        : cursor{program, reactor} {}
       // Scan the next token
       token::Token scan() noexcept;
-      bool empty() const noexcept { return base.empty(); }
+      bool empty() const noexcept { return cursor.empty(); }
       // Jump to the end of program
-      void drain() noexcept { base.drain_program(); }
+      void drain() noexcept { cursor.drain_program(); }
 
     private:
       // manages position in the program (aka actual/core cursor)
-      Cursor base;
+      Cursor cursor;
       // They do as they say and wrap as a token
       token::Token consume_whitespace() noexcept;
       token::Token consume_comment() noexcept;
-      token::Token consume_string() noexcept;
-      token::Token consume_raw_string() noexcept;
+      token::Token consume_string(int flags) noexcept;
       token::Token consume_number() noexcept;
       token::Token consume_identifier() noexcept;
     };

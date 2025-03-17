@@ -42,7 +42,7 @@ namespace rattle::lexer::internal {
     // Jump to the end of the program.
     void drain_program() noexcept {
       // NOTE: No more tokens after this call, only `Eot`.
-      start.iterator = current.iterator = program.cend();
+      start.iterator = current.iterator = line_start = program.cend();
     }
     // Check if we are at the end of the program.
     bool empty() const noexcept { return current.iterator == program.cend(); }
@@ -103,16 +103,31 @@ namespace rattle::lexer::internal {
     // Advance and match if safe [UNSAFE: calls `eat`]
     bool match_next(char expected) noexcept { return (eat(), match(expected)); }
     // Make a token of kind
-    token::Token make_token(token::Kind kind) noexcept {
-      token::Token token{kind, start.location, current.location, buffer()};
+    token::Token make_token(token::kinds::Token kind, int flags = 0) noexcept {
+      token::Token token{
+        kind, flags, start.location, current.location, buffer()};
       reactor.trace(token); // notify the reactor that a token was created
-      flush_buffer(); // flush current lexeme
+      flush_buffer();       // flush current lexeme
       return token;
     }
+    // Helper functions
+#define MAKE_TOKEN(Kind)                                                       \
+  inline token::Token make_token(                                              \
+    token::kinds::Kind::variants flags) noexcept {                             \
+    return make_token(token::kinds::Token::Kind, flags);                       \
+  }
+    MAKE_TOKEN(Identifier)
+    MAKE_TOKEN(Operator)
+    MAKE_TOKEN(String)
+    MAKE_TOKEN(Number)
+    MAKE_TOKEN(Marker)
+    MAKE_TOKEN(Assignment)
+#undef MAKE_TOKEN
+
     // Report and make an error token
     token::Token make_token(error::Kind kind) noexcept {
       report(kind);
-      return make_token(token::Kind::Error);
+      return make_token(token::kinds::Marker::Error);
     }
     // Consume while some predicate is true
     template <class Predicate>

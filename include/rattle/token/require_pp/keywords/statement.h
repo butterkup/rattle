@@ -1,5 +1,6 @@
 #include "../ensure_def.h"
 
+rattle_pp_token_macro(Else, "else")
 rattle_pp_token_macro(Return, "return")
 rattle_pp_token_macro(If, "if")
 rattle_pp_token_macro(For, "for")
