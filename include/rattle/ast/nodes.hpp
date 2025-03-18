@@ -90,11 +90,10 @@ namespace rattle::ast {
   } // namespace expr
 
   namespace stmt {
-    struct Block: Stmt {
-      Block(std::vector<Scoped<Stmt>> stmts, tree::stmt::Block *raw = nullptr)
-        : Stmt{}, raw{raw}, stmts{std::move(stmts)} {}
-      tree::stmt::Block *raw;
-      std::vector<Scoped<Stmt>> stmts;
+    struct Event: Stmt {
+      Event(kinds::Event kind, tree::Stmt *raw = nullptr): Stmt{}, raw{raw} {}
+      tree::Stmt *raw;
+      kinds::Event kind;
       create_stmt_visit;
     };
 
@@ -108,10 +107,10 @@ namespace rattle::ast {
 
     struct For: Stmt {
       For(Scoped<Expr> binding, Scoped<Expr> iterable, Scoped<Stmt> body,
-        tree::stmt::TkExprBlock *raw = nullptr)
+        tree::stmt::TkExprStmt *raw = nullptr)
         : Stmt{}, raw{raw}, binding{std::move(binding)},
           iterable{std::move(iterable)}, body{std::move(body)} {}
-      tree::stmt::TkExprBlock *raw;
+      tree::stmt::TkExprStmt *raw;
       Scoped<Expr> binding, iterable;
       Scoped<Stmt> body;
       create_stmt_visit;
@@ -119,28 +118,20 @@ namespace rattle::ast {
 
     struct While: Stmt {
       While(Scoped<Expr> condition, Scoped<Stmt> body,
-        tree::stmt::TkExprBlock *raw = nullptr)
+        tree::stmt::TkExprStmt *raw = nullptr)
         : Stmt{}, raw{raw}, condition{std::move(condition)},
           body{std::move(body)} {}
-      tree::stmt::TkExprBlock *raw;
+      tree::stmt::TkExprStmt *raw;
       Scoped<Expr> condition;
       Scoped<Stmt> body;
       create_stmt_visit;
     };
 
-    struct LoopControl: Stmt {
-      LoopControl(kinds::LoopControl kind, tree::stmt::TkExpr *raw = nullptr)
-        : Stmt{}, raw{raw}, kind{kind} {}
-      tree::stmt::TkExpr *raw;
-      kinds::LoopControl kind;
-      create_stmt_visit;
-    };
-
     struct Class: Stmt {
       Class(std::string_view name, Scoped<Stmt> body,
-        tree::stmt::TkExprBlock *raw = nullptr)
+        tree::stmt::TkExprStmt *raw = nullptr)
         : Stmt{}, raw{raw}, name{name}, body{std::move(body)} {}
-      tree::stmt::TkExprBlock *raw;
+      tree::stmt::TkExprStmt *raw;
       std::string_view name;
       Scoped<Stmt> body;
       create_stmt_visit;
@@ -148,10 +139,10 @@ namespace rattle::ast {
 
     struct Def: Stmt {
       Def(kinds::Def kind, std::string_view name, Scoped<Expr> params,
-        Scoped<Stmt> body, tree::stmt::TkExprBlock *raw = nullptr)
+        Scoped<Stmt> body, tree::stmt::TkExprStmt *raw = nullptr)
         : Stmt{}, raw{raw}, kind{kind}, name{name},
           parameters{std::move(params)}, body{std::move(body)} {}
-      tree::stmt::TkExprBlock *raw;
+      tree::stmt::TkExprStmt *raw;
       kinds::Def kind;
       std::string_view name;
       Scoped<Expr> parameters;
@@ -181,13 +172,21 @@ namespace rattle::ast {
     };
 
     struct If: Stmt {
-      If(Scoped<Expr> condition, Scoped<Stmt> ontrue, Scoped<Stmt> onfalse,
-        tree::stmt::If *raw = nullptr)
+      If(Scoped<Expr> condition, Scoped<Stmt> ontrue,
+        tree::stmt::TkExprStmt *raw = nullptr)
         : Stmt{}, raw{raw}, condition{std::move(condition)},
-          ontrue{std::move(ontrue)}, onfalse{std::move(onfalse)} {}
-      tree::stmt::If *raw;
+          ontrue{std::move(ontrue)} {}
+      tree::stmt::TkExprStmt *raw;
       Scoped<Expr> condition;
-      Scoped<Stmt> ontrue, onfalse;
+      Scoped<Stmt> ontrue;
+      create_stmt_visit;
+    };
+
+    struct Else: Stmt {
+      Else(Scoped<Stmt> onfalse, tree::stmt::TkExprStmt *raw = nullptr)
+        : raw{raw}, onfalse{std::move(onfalse)} {}
+      tree::stmt::TkExprStmt *raw;
+      Scoped<Stmt> onfalse;
       create_stmt_visit;
     };
   } // namespace stmt
