@@ -32,17 +32,17 @@ namespace rattle::parser::internal {
     };
 
     bool skip(token::Token const &token) const {
-      switch (token.kind) {
+      switch (token.merge()) {
       // Handling `token::Kind::Eot` might lead to infinite loop
-      case token::Kind::Error:
+      case rattle_merge_kind2(Marker, Error):
         return flags & State::Filter::ERROR;
-      case token::Kind::Newline:
+      case rattle_merge_kind2(Marker, Newline):
         return flags & State::Filter::NEWLINE;
-      case token::Kind::Whitespace:
+      case rattle_merge_kind2(Marker, Whitespace):
         return flags & State::Filter::WHITESPACE;
-      case token::Kind::Pound:
+      case rattle_merge_kind2(Marker, Pound):
         return flags & State::Filter::COMMENT;
-      case token::Kind::Escape:
+      case rattle_merge_kind2(Marker, Escape):
         return flags & State::Filter::ESCAPE;
       default:
         return false;
@@ -77,9 +77,9 @@ namespace rattle::parser::internal {
       return oflags;
     }
 
-    Flags with();
-    Flags with(State::Filter flags);
-    Flags with(State::Filter flags, unsigned mask);
+    [[nodiscard]] Flags with();
+    [[nodiscard]] Flags with(State::Filter flags);
+    [[nodiscard]] Flags with(State::Filter flags, unsigned mask);
 
     void drain_program() {
       // Drain the lexer
@@ -89,13 +89,30 @@ namespace rattle::parser::internal {
       // Set current to token of kind `token::Kind::Eot`
       state.first = lexer.lex();
       // Assert for testing purposes
-      assert(iskind(token::Kind::Eot));
+      assert(iskind(token::kinds::Token::Eot));
     }
 
-    bool empty() const { return iskind(token::Kind::Eot); }
+    bool empty() const { return iskind(token::kinds::Token::Eot); }
     token::Token const &peek() const { return state.first; }
-    bool iskind(token::Kind kind) const { return iskind() == kind; }
-    token::Kind iskind() const { return state.first.kind; }
+    std::size_t merge() const { return peek().merge(); }
+    token::kinds::Token iskind() const { return state.first.kind; }
+    bool iskind(std::size_t merged) const { return merged == merge(); }
+    bool iskind(token::kinds::Token kind, int flags = 0) const {
+      return merge() == rattle_merge_kind(kind, flags);
+    }
+
+    // Reduce typing repetitive namespace paths
+#define MAKE_ISKIND(Name)                                                      \
+  inline bool iskind(token::kinds::Name::variants flags) const {               \
+    return iskind(token::kinds::Token::Name, flags);                           \
+  }
+    MAKE_ISKIND(Identifier)
+    MAKE_ISKIND(Number)
+    MAKE_ISKIND(String)
+    MAKE_ISKIND(Marker)
+    MAKE_ISKIND(Operator)
+    MAKE_ISKIND(Assignment)
+#undef MAKE_ISKIND
 
     void report(error::Error error) {
       if (reactor.report(error) == OnError::Abort) {
@@ -120,10 +137,12 @@ namespace rattle::parser::internal {
       return eaten;
     }
 
-    bool match(token::Kind kind) {
-      return iskind(kind) ? (eat(), true) : false;
+    bool match(token::kinds::Token kind, int flags = 0) {
+      return iskind(kind, flags) ? (eat(), true) : false;
     }
-    bool match_next(token::Kind kind) { return (eat(), match(kind)); }
+    bool match_next(token::kinds::Token kind, int flags = 0) {
+      return (eat(), match(kind, flags));
+    }
   };
 
   // Delegate flags resetting to RAII.

@@ -3,6 +3,7 @@
 #include "api.hpp"
 #include "cursor.hpp"
 #include "error.hpp"
+#include "utility.hpp"
 #include <rattle/lexer.hpp>
 #include <rattle/parser.hpp>
 #include <rattle/tree/nodes.hpp>
@@ -12,36 +13,14 @@
 namespace rattle::parser {
   namespace internal {
     using utility::Scoped;
-    // Track how many scopes entered.
-    class Scopes {
-      unsigned braces, parens, brackets;
 
-    public:
-      Scopes(): braces{0}, parens{0}, brackets{0} {}
-      // Decrement RAII
-      class Decrementor {
-        unsigned &value;
-
-      public:
-        Decrementor(unsigned &v): value{v} {}
-        ~Decrementor() { value--; }
-      };
-      // Enter a new scope and let RAII handle exiting
-      Decrementor enter_paren() { return ++parens; }
-      Decrementor enter_brace() { return ++braces; }
-      Decrementor enter_bracket() { return ++brackets; }
-      // Check if we are in the respective scopes; unsigned is convertible to bool
-      unsigned in_paren() const { return parens; }
-      unsigned in_brace() const { return braces; }
-      unsigned in_bracket() const { return brackets; }
-    };
     // Simple LL(1) parser for `rattle`, default impl
     struct Parser {
       Parser(ILexer &lexer, IReactor &reactor)
-        : scopes{}, base{lexer, reactor}, reactor{reactor} {}
+        : cursor{lexer, reactor}, scopes{}, reactor{reactor}, blocks{reactor} {}
       Scoped<tree::Stmt> parse_stmt() noexcept;
-      bool empty() const noexcept { return base.empty(); }
-      void drain() noexcept { return base.drain_program(); }
+      bool empty() const noexcept { return cursor.empty() and blocks.empty(); }
+      void drain() noexcept { return cursor.drain_program(); }
 
       // A way to construct parse tree nodes without fragmenting memory,
       // assuming the reactor is taking from an arena, whatever they get memory
@@ -61,7 +40,7 @@ namespace rattle::parser {
           // `Scoped`s will be returned which will discard the args and much more.
           // XXX: Empty `Scoped`s will indicate to the analyzer that no more can be produced
           // or atleast an error occurred, method `empty` will determine the truth.
-          base.report(error::Kind::reactor_out_of_memory);
+          cursor.report(error::Kind::reactor_out_of_memory);
         } else {
           // Construct `Type` on allocated memory
           new (slab) Type(std::forward<Args>(args)...);
@@ -70,17 +49,28 @@ namespace rattle::parser {
         return Scoped{slab};
       }
 
+      Cursor cursor;
       Scopes scopes;
-      Cursor base;
 
     private:
       IReactor &reactor;
-      Scoped<tree::stmt::Block> parse_block() noexcept;
-      Scoped<tree::stmt::If> parse_if() noexcept;
-      Scoped<tree::stmt::TkExprBlock> parse_def() noexcept;
-      Scoped<tree::stmt::TkExprBlock> parse_class() noexcept;
-      Scoped<tree::stmt::TkExprBlock> parse_for() noexcept;
-      Scoped<tree::stmt::TkExprBlock> parse_while() noexcept;
+      Stack<tree::stmt::Event *, 10, IReactor> blocks;
+
+      inline void enter_scope(tree::stmt::Event *blockinfo) {
+        scopes.enter_scope();
+        blocks.push(blockinfo);
+      }
+      inline Scoped<tree::stmt::Event> leave_scope(token::Token const &rbrace) {
+        assert(scopes.in_scope());
+        assert(not blocks.empty());
+        auto end_block = blocks.top();
+        *end_block = {tree::stmt::Event::Kind::ScopeEnd, rbrace};
+        blocks.pop(); // Take ownership
+        scopes.leave_scope();
+        return end_block;
+      }
+      Scoped<tree::stmt::Event> parse_block() noexcept;
+      Scoped<tree::stmt::TkExprStmt> parse_tkexprblock() noexcept;
       Scoped<tree::Expr> parse_expression() noexcept;
       Scoped<tree::Stmt> parse_statement() noexcept;
       Scoped<tree::Stmt> parse_assignment() noexcept;
