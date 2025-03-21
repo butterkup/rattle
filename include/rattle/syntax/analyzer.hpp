@@ -74,41 +74,75 @@ namespace rattle::analyzer {
       Flags flags;
     };
 
+    // Help keep track of how deep the visitor has been called
+    // A kind of stack counting, the bottom most having 0 and the
+    // rest 1 and counting
+    struct Level {
+      Level(): counter{-1} {}
+      // Can only rad the counter
+      int get() const { return counter; }
+      // On entry, must exit: RAII
+      [[nodiscard]] auto enter() {
+        struct Decr {
+          ~Decr() { ref--; }
+          int &ref;
+        };
+        return Decr{++counter};
+      }
+
+    private:
+      // Hidden to reduce corruption
+      int counter;
+    };
+
 #define create_visit(Node) void visit(Node &) noexcept override;
 
     class ExpressionAnalyzer: private tree::visitor::Expression {
 #define rattle_pp_token_macro(Node, _) create_visit(tree::expr::Node)
-#define rattle_undef_token_macro
 #include <rattle/tree/require_pp/expression.h>
-#include <rattle/tree/require_pp/undefine.h>
+#undef rattle_pp_token_macro
 
       Flags flags;
-      int level;
+      Level level;
       Reactor &reactor;
       Scoped<ast::Expr> node;
 
     public:
       ExpressionAnalyzer(Reactor &reactor)
-        : tree::visitor::Expression{}, flags{}, level{-1}, reactor{reactor},
+        : tree::visitor::Expression{}, flags{}, level{}, reactor{reactor},
           node{nullptr} {}
 
-      template <unsigned ConstraintFlags = Flags::None>
+      template <unsigned ConstraintFlags = Flags::None,
+        unsigned ConstraintsFilter = Flags::CONSTRAINTS>
       Result analyze(tree::Expr &expr) noexcept {
-        level++;
-        Flags temp = flags;
-        flags = Flags{(ConstraintFlags | temp.get()) & Flags::CONSTRAINTS};
+        // Enter a new level, if the caller is external to the class
+        // then level should be 0, otherwise a value greater than zero
+        // and when completely leaving, it goes back to -1
+        auto _ = level.enter(); // RAII
+        // Save caller's state
+        Scoped<ast::Expr> oldnode = std::move(node);
+        Flags oldflags = flags; // Save caller's state.
+        // Inherit filtered caller's constraints.
+        // NOTE: Normal flags could lead to invalid visitation, strictly ensure
+        // constraints are the only passed while normal flags are all zero
+        flags = Flags{(ConstraintFlags | oldflags.get()) &
+                      (ConstraintsFilter & Flags::CONSTRAINTS)};
+        // Visit the expression: Set flags and node as desired
         expr.visit(*this);
-        flags = temp;
-        level--;
-        return {std::move(node), flags};
+        // Capture the visited node's state
+        Flags newflags = flags;
+        Scoped<ast::Expr> newnode = std::move(node);
+        // Reset caller's state
+        flags = oldflags;
+        node = std::move(oldnode);
+        return {std::move(newnode), newflags};
       }
     };
 
     class StatementAnalyzer: private tree::visitor::Statement {
 #define rattle_pp_token_macro(Node, _) create_visit(tree::stmt::Node)
-#define rattle_undef_token_macro
 #include <rattle/tree/require_pp/statement.h>
-#include <rattle/tree/require_pp/undefine.h>
+#undef rattle_pp_token_macro
       Reactor &reactor;
       Scoped<ast::Stmt> node;
       ExpressionAnalyzer &expr_analyzer;

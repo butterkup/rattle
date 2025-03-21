@@ -1,6 +1,7 @@
 #include <iomanip>
 #include <ostream>
 #include <rattle/lexer/error.hpp>
+#include <rattle/rattle.hpp>
 #include <rattle/token/token.hpp>
 #include <rattle/utility.hpp>
 #include <sstream>
@@ -78,13 +79,13 @@ namespace rattle::utility {
 } // namespace rattle::utility
 
 namespace rattle::token {
-  std::string_view to_string(token::Kind kind) noexcept {
+  std::string_view to_string(token::kinds::Token kind) noexcept {
     switch (kind) {
-#define rattle_undef_forget_token_macro
 #define rattle_pp_token_macro(kind, _)                                         \
-  case token::Kind::kind:                                                      \
+  case token::kinds::Token::kind:                                              \
     return #kind;
-#include <rattle/token/token_pp.h>
+#include <rattle/token/require_pp/kind.h>
+#undef rattle_pp_token_macro
     default:
       return "(token::Kind::Unknown)";
     }
@@ -101,8 +102,91 @@ namespace rattle::token {
   }
 
   std::ostream &operator<<(std::ostream &s, token::Token const &tk) noexcept {
-    return s << "Token{ kind=" << to_string(tk.kind) << ", start=" << tk.start
-             << ", end=" << tk.end << ", payload='"
+    s << "Token{ kind=" << to_string(tk.kind);
+
+    switch (tk.kind) {
+    case token::kinds::Token::Eot:
+      goto outside;
+
+    case token::kinds::Token::String:
+      s << "{ "
+        << ((tk.flags & token::kinds::String::Error) ? "Deformed" :
+                                                       "Wellformed")
+        << ", "
+        << ((tk.flags & token::kinds::String::Multiline) ? "Multi" : "Single")
+        << "line, "
+        << ((tk.flags & token::kinds::String::Raw) ? "Raw" : "Escape") << " }";
+      goto outside;
+
+    case token::kinds::Token::Number:
+      switch (tk.flags & ~token::kinds::Number::Error) {
+#define rattle_pp_token_macro(Kind, _)                                         \
+  case token::kinds::Number::Kind:                                             \
+    s << "{ status="                                                           \
+      << ((tk.flags & token::kinds::Number::Error) ? "Deformed" :              \
+                                                     "Wellformed")             \
+      << ", kind=" << #Kind << " }";                                           \
+    goto outside;
+#include <rattle/token/require_pp/kinds/number.h>
+#undef rattle_pp_token_macro
+      default:
+        unreachable();
+      }
+
+    case token::kinds::Token::Identifier:
+      switch (tk.flags) {
+#define rattle_pp_token_macro(Kind, _)                                         \
+  case token::kinds::Identifier::Kind:                                         \
+    s << "{ " << #Kind << " }";                                                \
+    goto outside;
+#include <rattle/token/require_pp/kinds/identifier.h>
+#undef rattle_pp_token_macro
+      default:
+        unreachable();
+      }
+
+    case token::kinds::Token::Assignment:
+      switch (tk.flags) {
+#define rattle_pp_token_macro(Kind, _)                                         \
+  case token::kinds::Assignment::Kind:                                         \
+    s << "{ " << #Kind << " }";                                                \
+    goto outside;
+#include <rattle/token/require_pp/kinds/assignment.h>
+#undef rattle_pp_token_macro
+      default:
+        unreachable();
+      }
+
+    case token::kinds::Token::Marker:
+      switch (tk.flags) {
+#define rattle_pp_token_macro(Kind, _)                                         \
+  case token::kinds::Marker::Kind:                                             \
+    s << "{ " << #Kind << " }";                                                \
+    goto outside;
+#include <rattle/token/require_pp/kinds/marker.h>
+#undef rattle_pp_token_macro
+      default:
+        unreachable();
+      }
+
+    case token::kinds::Token::Operator:
+      switch (tk.flags) {
+#define rattle_pp_token_macro(Kind, _)                                         \
+  case token::kinds::Operator::Kind:                                           \
+    s << "{ " << #Kind << " }";                                                \
+    goto outside;
+#include <rattle/token/require_pp/kinds/operator.h>
+#undef rattle_pp_token_macro
+      default:
+        unreachable();
+      }
+
+    default:
+      unreachable();
+    }
+
+  outside:
+    return s << ", start=" << tk.start << ", end=" << tk.end << ", payload='"
              << utility::escape{tk.lexeme} << "' }";
   }
 } // namespace rattle::token

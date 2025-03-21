@@ -94,7 +94,7 @@ namespace rattle::tree {
     };
 
     struct Event: Stmt {
-      enum class Kind { ScopeBegin, ScopeEnd };
+      enum class Kind { ScopeBegin, ScopeEnd, Continue, Break };
       Event(Kind kind, token::Token const &at): at{at}, kind{kind} {}
       token::Token at;
       Kind kind;
