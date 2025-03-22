@@ -2,6 +2,7 @@
 #include <cctype>
 #include <ostream>
 #include <rattle/lexer/lexer.hpp>
+#include <rattle/token/token.hpp>
 #include <rattle/utility.hpp>
 #include <stdexcept>
 #include <string_view>
@@ -9,32 +10,33 @@
 
 namespace rattle::lexer {
   namespace internal {
-    // Mapping from keyword string to token::Kind
-    static std::unordered_map<std::string_view, token::Kind> const keywords{
-#define rattle_undef_token_macro
-#define rattle_pp_token_macro(kind, keyword) {keyword, token::Kind::kind},
-#include <rattle/token/require_pp/keywords.h>
-#include <rattle/token/require_pp/undefine.h>
+    // Mapping from keyword string to token::kinds::Identifier
+    static std::unordered_map<std::string_view,
+      token::kinds::Identifier::variants> const keywords{
+#define rattle_pp_token_macro(kind, keyword)                                   \
+  {keyword, token::kinds::Identifier::kind},
+#include <rattle/token/require_pp/keywords/all.h>
+#undef rattle_pp_token_macro
     };
 
     // consume names; keywords and variable names.
     token::Token Lexer::consume_identifier() noexcept {
-      base.eat_while(utility::is_identifier_body_char);
+      cursor.eat_while(utility::is_identifier_body_char);
       try {
-        return base.make_token(keywords.at(base.buffer()));
+        return cursor.make_token(keywords.at(cursor.buffer()));
       } catch (std::out_of_range &) {
-        return base.make_token(token::Kind::Identifier);
+        return cursor.make_token(token::kinds::Identifier::Variable);
       }
     }
 
     token::Token Lexer::consume_whitespace() noexcept {
-      base.eat_while(utility::is_whitespace);
-      return base.make_token(token::Kind::Whitespace);
+      cursor.eat_while(utility::is_whitespace);
+      return cursor.make_token(token::kinds::Marker::Whitespace);
     }
 
     token::Token Lexer::consume_comment() noexcept {
-      base.eat_while([](char ch) { return ch != '\n'; });
-      return base.make_token(token::Kind::Pound);
+      cursor.eat_while([](char ch) { return ch != '\n'; });
+      return cursor.make_token(token::kinds::Marker::Pound);
     }
 
     char Cursor::eat() noexcept {

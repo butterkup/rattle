@@ -1,4 +1,5 @@
 #include <rattle/lexer/lexer.hpp>
+#include <rattle/token/token.hpp>
 #include <rattle/utility.hpp>
 
 namespace rattle::lexer::internal {
@@ -22,69 +23,70 @@ namespace rattle::lexer::internal {
     } else {
       base.report(error::Kind::partial_toplvl_escape);
     }
-    return base.make_token(token::Kind::Escape);
+    return base.make_token(token::kinds::Marker::Escape);
   }
 
   token::Token Lexer::scan() noexcept {
-    while (not base.empty()) {
-      switch (base.peek()) {
+    while (not cursor.empty()) {
+      switch (cursor.peek()) {
         // clang-format off
         case '\'':
-        case '"':   return consume_string();
+        case '"':   return consume_string(token::kinds::String::Normal);
+        case '\\':  return toplvl_escape(cursor);
         case '#':   return consume_comment();
-        case '\\':  return toplvl_escape(base);
         // Windows CRLF
-        case '\r':  return (base.match_next('\n'))?
-                      base.make_token(token::Kind::Newline):
-                      base.make_token(error::Kind::partially_formed_crlf);
+        case '\r':  return cursor.match_next('\n')?
+                      cursor.make_token(token::kinds::Marker::Newline):
+                      cursor.make_token(error::Kind::partially_formed_crlf);
         case 'r':
-        case 'R':   return (base.eat(), (base.peek() == '"' or base.peek() == '\''))?
-                      consume_raw_string(): consume_identifier();
-        case '\n':  return base.make_token((base.eat(), token::Kind::Newline));
-        case ';':   return base.make_token((base.eat(), token::Kind::Semicolon));
-        case '.':   return base.make_token((base.eat(), token::Kind::Dot));
-        case ',':   return base.make_token((base.eat(), token::Kind::Comma));
-        case '(':   return base.make_token((base.eat(), token::Kind::OpenParen));
-        case ')':   return base.make_token((base.eat(), token::Kind::CloseParen));
-        case '{':   return base.make_token((base.eat(), token::Kind::OpenBrace));
-        case '}':   return base.make_token((base.eat(), token::Kind::CloseBrace));
-        case '[':   return base.make_token((base.eat(), token::Kind::OpenBracket));
-        case ']':   return base.make_token((base.eat(), token::Kind::CloseBracket));
-        case '=':   return base.make_token(base.match_next('=') ?
-                      token::Kind::EqualEqual:
-                      token::Kind::Equal);
-        case '-':   return base.make_token(base.match_next('=') ?
-                      token::Kind::MinusEqual:
-                      token::Kind::Minus);
-        case '+':   return base.make_token(base.match_next('=') ?
-                      token::Kind::PlusEqual:
-                      token::Kind::Plus);
-        case '*':   return base.make_token(base.match_next('=') ?
-                      token::Kind::StarEqual:
-                      token::Kind::Star);
-        case '/':   return base.make_token(base.match_next('=') ?
-                      token::Kind::SlashEqual:
-                      token::Kind::Slash);
-        case '!':   return base.match_next('=') ?
-                      base.make_token(token::Kind::NotEqual) :
-                      base.make_token(error::Kind::partial_not_equal);
-        case '<':   return base.make_token(base.match_next('=') ?
-                      token::Kind::LessEqual :
-                      token::Kind::LessThan);
-        case '>':   return base.make_token(base.match_next('=') ?
-                      token::Kind::GreaterEqual :
-                      token::Kind::GreaterThan);
+        case 'R':   return (cursor.eat(), (cursor.peek() == '"' or cursor.peek() == '\''))?
+                      consume_string(token::kinds::String::Raw):
+                      consume_identifier();
+        case '\n':  return cursor.make_token((cursor.eat(), token::kinds::Marker::Newline));
+        case ';':   return cursor.make_token((cursor.eat(), token::kinds::Marker::Semicolon));
+        case '(':   return cursor.make_token((cursor.eat(), token::kinds::Marker::OpenParen));
+        case ')':   return cursor.make_token((cursor.eat(), token::kinds::Marker::CloseParen));
+        case '{':   return cursor.make_token((cursor.eat(), token::kinds::Marker::OpenBrace));
+        case '}':   return cursor.make_token((cursor.eat(), token::kinds::Marker::CloseBrace));
+        case '[':   return cursor.make_token((cursor.eat(), token::kinds::Marker::OpenBracket));
+        case ']':   return cursor.make_token((cursor.eat(), token::kinds::Marker::CloseBracket));
+        case '.':   return cursor.make_token((cursor.eat(), token::kinds::Operator::Dot));
+        case ',':   return cursor.make_token((cursor.eat(), token::kinds::Operator::Comma));
+        case '<':   return cursor.make_token(cursor.match_next('=') ?
+                      token::kinds::Operator::LessEqual :
+                      token::kinds::Operator::LessThan);
+        case '>':   return cursor.make_token(cursor.match_next('=') ?
+                      token::kinds::Operator::GreaterEqual :
+                      token::kinds::Operator::GreaterThan);
+        case '!':   return cursor.match_next('=') ?
+                      cursor.make_token(token::kinds::Operator::NotEqual) :
+                      cursor.make_token(error::Kind::partial_not_equal);
+        case '=':   return cursor.match_next('=') ?
+                      cursor.make_token(token::kinds::Operator::EqualEqual):
+                      cursor.make_token(token::kinds::Assignment::Equal);
+        case '-':   return cursor.match_next('=') ?
+                      cursor.make_token(token::kinds::Assignment::MinusEqual):
+                      cursor.make_token(token::kinds::Operator::Minus);
+        case '+':   return cursor.match_next('=') ?
+                      cursor.make_token(token::kinds::Assignment::PlusEqual):
+                      cursor.make_token(token::kinds::Operator::Plus);
+        case '*':   return cursor.match_next('=') ?
+                      cursor.make_token(token::kinds::Assignment::StarEqual):
+                      cursor.make_token(token::kinds::Operator::Star);
+        case '/':   return cursor.match_next('=') ?
+                      cursor.make_token(token::kinds::Assignment::SlashEqual):
+                      cursor.make_token(token::kinds::Operator::Slash);
         default:
-          if (utility::is_whitespace(base.peek()))
+          if (utility::is_whitespace(cursor.peek()))
             return consume_whitespace();
-          if (utility::is_decimal(base.peek()))
+          if (utility::is_decimal(cursor.peek()))
             return consume_number();
-          if (utility::is_identifier_start_char(base.peek()))
+          if (utility::is_identifier_start_char(cursor.peek()))
             return consume_identifier();
-          return base.make_token((base.eat(), error::Kind::unrecognized_toplvl_character));
+          return cursor.make_token((cursor.eat(), error::Kind::unrecognized_toplvl_character));
         // clang-format on
       }
     }
-    return base.make_token(token::Kind::Eot);
+    return cursor.make_token(token::kinds::Token::Eot);
   }
 } // namespace rattle::lexer::internal
