@@ -1,9 +1,8 @@
+#include "rattle/rattle.hpp"
 #include <cassert>
-#include <optional>
 #include <rattle/parser/parser.hpp>
 #include <rattle/token/token.hpp>
 #include <rattle/tree/nodes.hpp>
-#include <vector>
 
 namespace rattle::parser::internal {
   Scoped<tree::Stmt> Parser::parse_stmt() noexcept {
@@ -12,122 +11,73 @@ namespace rattle::parser::internal {
       if (stmt) {
         return stmt;
       }
-      switch (base.iskind()) {
-      case token::Kind::CloseBrace:
-        assert(not scopes.in_brace());
-        base.report(error::Kind::dangling_brace, base.eat());
+      switch (cursor.merge()) {
+      case rattle_merge_kind2(Marker, CloseBrace):
+        assert(not scopes.in_scope());
+        cursor.report(error::Kind::dangling_brace, cursor.eat());
         break;
-      case token::Kind::CloseParen:
+      case rattle_merge_kind2(Marker, CloseParen):
         assert(not scopes.in_paren());
-        base.report(error::Kind::dangling_paren, base.eat());
+        cursor.report(error::Kind::dangling_paren, cursor.eat());
         break;
-      case token::Kind::CloseBracket:
+      case rattle_merge_kind2(Marker, CloseBracket):
         assert(not scopes.in_bracket());
-        base.report(error::Kind::dangling_bracket, base.eat());
+        cursor.report(error::Kind::dangling_bracket, cursor.eat());
         break;
-      case token::Kind::Eot:
-        return stmt;
+      case rattle_merge_kind(token::kinds::Token::Eot, 0): {
+        assert(cursor.empty());
+        if (not blocks.empty()) {
+          cursor.report(error::Kind::unterminated_brace, blocks.top()->at);
+          return leave_scope(cursor.eat());
+        } else {
+          return nullptr;
+        }
+      }
       default:
-        assert(false);
+        unreachable();
       }
     }
   }
 
-  Scoped<tree::stmt::Block> Parser::parse_block() noexcept {
-    assert(base.iskind(token::Kind::OpenBrace));
-    auto lbrace = base.eat();
-    std::vector<Scoped<tree::Stmt>> stmts;
-    auto scope = scopes.enter_brace();
-    for (;;) {
-      auto stmt = parse_statement();
-      if (stmt) {
-        stmts.push_back(std::move(stmt));
-        continue;
-      }
-      switch (base.iskind()) {
-      case token::Kind::Eot:
-        // Malformed block statement, but okay for analysable.
-        base.report(error::Kind::unterminated_brace, lbrace);
-      case token::Kind::CloseBrace:
-        return make<tree::stmt::Block>(lbrace, base.eat(), std::move(stmts));
-      default:
-        assert(false); // Not reacheable!
-      }
+  Scoped<tree::stmt::Event> Parser::parse_block() noexcept {
+    assert(cursor.iskind(token::kinds::Marker::OpenBrace));
+    auto lbrace = cursor.eat();
+    // We don't know where this block ends so both the end and start
+    // share the same token until the closing one is found or Eot is set.
+    auto block_enter =
+      make<tree::stmt::Event>(tree::stmt::Event::Kind::ScopeBegin, lbrace);
+    // I need to know the info about entry to report improper exits
+    auto block_exit =
+      make<tree::stmt::Event>(tree::stmt::Event::Kind::ScopeBegin, lbrace);
+    // Save the block exit event currently holding entry info to aid error reporting
+    // Give the stack ownership of the pointer.
+    enter_scope(block_exit.release());
+    return block_enter;
+  }
+
+  Scoped<tree::stmt::TkExprStmt> Parser::parse_tkexprblock() noexcept {
+    auto tk = cursor.eat();
+    auto expr = parse_expression();
+    Scoped<tree::Stmt> block;
+    if (cursor.iskind(token::kinds::Marker::OpenBrace)) {
+      block = parse_block();
     }
-  }
-
-#define optional_parse_block()                                                 \
-  base.iskind(token::Kind::OpenBrace) ? parse_block() : nullptr
-
-  Scoped<tree::stmt::TkExprBlock> Parser::parse_for() noexcept {
-    assert(base.iskind(token::Kind::For));
-    auto kw = base.eat();
-    auto binding = parse_expression();
-    return make<tree::stmt::TkExprBlock>(
-      kw, std::move(binding), optional_parse_block());
-  }
-
-  Scoped<tree::stmt::TkExprBlock> Parser::parse_while() noexcept {
-    assert(base.iskind(token::Kind::While));
-    auto kw = base.eat();
-    auto binding = parse_expression();
-    return make<tree::stmt::TkExprBlock>(
-      kw, std::move(binding), optional_parse_block());
-  }
-
-  Scoped<tree::stmt::TkExprBlock> Parser::parse_def() noexcept {
-    assert(base.iskind(token::Kind::Def));
-    auto kw = base.eat();
-    auto name_params = parse_expression();
-    return make<tree::stmt::TkExprBlock>(
-      kw, std::move(name_params), optional_parse_block());
-  }
-
-  Scoped<tree::stmt::TkExprBlock> Parser::parse_class() noexcept {
-    assert(base.iskind(token::Kind::Class));
-    auto kw = base.eat();
-    auto name_bases = parse_expression();
-    return make<tree::stmt::TkExprBlock>(
-      kw, std::move(name_bases), optional_parse_block());
-  }
-
-  Scoped<tree::stmt::If> Parser::parse_if() noexcept {
-    assert(base.iskind(token::Kind::If));
-    auto kw = base.eat();
-    auto cond = parse_expression();
-    auto block = optional_parse_block();
-    tree::stmt::internal::If if_{kw, std::move(cond), std::move(block)};
-    std::optional<tree::stmt::internal::Else> else_ = std::nullopt;
-    if (base.iskind(token::Kind::Else)) {
-      auto kw2 = base.eat();
-      Scoped<tree::Stmt> block2;
-      if (base.iskind(token::Kind::If)) {
-        block2 = parse_if();
-      } else if (base.iskind(token::Kind::OpenBrace)) {
-        block2 = parse_block();
-      }
-      else_.emplace(kw2, std::move(block));
-    }
-    return make<tree::stmt::If>(std::move(if_), std::move(else_));
+    return make<tree::stmt::TkExprStmt>(tk, std::move(expr), std::move(block));
   }
 
   Scoped<tree::Stmt> Parser::parse_assignment() noexcept {
     auto left = parse_expression();
-    switch (base.iskind()) {
-#define rattle_pp_token_macro(kind, _) case token::Kind::kind:
-#include <rattle/token/require_pp/assignment.h>
-      break;
-    default:
-      if (left) {
-        parse_eos();
-        return make<tree::stmt::ExprStmt>(std::move(left));
-      } else {
-        return nullptr;
-      }
+    if (cursor.iskind(token::kinds::Token::Assignment)) {
+      auto op = cursor.eat();
+      auto right = parse_expression();
+      return make<tree::stmt::Assignment>(
+        op, std::move(left), std::move(right));
+    } else if (left) {
+      parse_eos();
+      return make<tree::stmt::ExprStmt>(std::move(left));
+    } else {
+      return nullptr;
     }
-    auto op = base.eat();
-    auto right = parse_expression();
-    return make<tree::stmt::Assignment>(op, std::move(left), std::move(right));
   }
 } // namespace rattle::parser::internal
 
