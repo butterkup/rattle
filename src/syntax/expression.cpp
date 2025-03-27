@@ -8,25 +8,38 @@
 
 namespace rattle::analyzer::syntax {
   void ExpressionAnalyzer::visit(tree::expr::Literal &expr) noexcept {
-    if (expr.value.kind == token::Kind::Identifier) {
+    if (expr.value.merge() == rattle_merge_kind2(Identifier, Variable)) {
       flags.set(Flags::Assignable | Flags::LiteralID | Flags::OnlyIDs);
       if (flags.test(Flags::PreferBinding)) {
         node = reactor.make<ast::expr::Binding>(
           ast::kinds::Binding::Name, expr.value.lexeme, &expr);
         flags.set(Flags::Binding);
         return;
+      } else {
+        node = reactor.make<ast::expr::Literal>(
+          ast::kinds::Literal::Identifier, expr.value.lexeme, &expr);
       }
     }
-    switch (expr.value.kind) {
-#define rattle_undef_token_macro
+    if (expr.value.kind == token::kinds::Token::Number) {
+      node = reactor.make<ast::expr::Literal>(
+        ast::kinds::Literal::Number, expr.value.lexeme, &expr);
+      return;
+    }
+    if (expr.value.kind == token::kinds::Token::String) {
+      node = reactor.make<ast::expr::Literal>(
+        ast::kinds::Literal::String, expr.value.lexeme, &expr);
+      return;
+    }
+    switch (expr.value.merge()) {
 #define rattle_pp_token_macro(Type, _)                                         \
-  case token::Kind::Type:                                                      \
+  case rattle_merge_kind2(Identifier, Type):                                   \
     node = reactor.make<ast::expr::Literal>(                                   \
       ast::kinds::Literal::Type, expr.value.lexeme, &expr);                    \
     break;
-#include <rattle/tree/require_pp/literal.h>
-#include <rattle/tree/require_pp/undefine.h>
-    case token::Kind::Error:
+#include <rattle/token/require_pp/keywords/literal.h>
+#undef rattle_pp_token_macro
+
+    case rattle_merge_kind2(Marker, Error):
       node = nullptr;
       break;
     default:
@@ -41,11 +54,11 @@ namespace rattle::analyzer::syntax {
     } else {
       /* REPORT ERROR */
     }
-    switch (expr.op.kind) {
-    case token::Kind::Plus:
+    switch (expr.op.merge()) {
+    case rattle_merge_kind2(Operator, Plus):
       node = reactor.make<ast::expr::UnaryExpr>(
         ast::kinds::UnaryExpr::Posify, std::move(temp.expr), &expr);
-    case token::Kind::Star:
+    case rattle_merge_kind2(Operator, Star):
       if (flags.test(Flags::PreferBinding)) {
         if (not temp.flags.test(Flags::LiteralID)) {
           /* REPORT ERROR */
@@ -58,10 +71,10 @@ namespace rattle::analyzer::syntax {
         node = reactor.make<ast::expr::UnaryExpr>(
           ast::kinds::UnaryExpr::Spread, std::move(temp.expr), &expr);
       }
-    case token::Kind::Minus:
+    case rattle_merge_kind2(Operator, Minus):
       node = reactor.make<ast::expr::UnaryExpr>(
         ast::kinds::UnaryExpr::Negate, std::move(temp.expr), &expr);
-    case token::Kind::Not:
+    case rattle_merge_kind2(Identifier, Not):
       node = reactor.make<ast::expr::UnaryExpr>(
         ast::kinds::UnaryExpr::LogicNOT, std::move(temp.expr), &expr);
     default:
@@ -78,11 +91,11 @@ namespace rattle::analyzer::syntax {
     }
     if (expr.right) {
       right = analyze(*expr.right);
-    } else if (expr.op.kind != token::Kind::Comma) {
+    } else if (expr.op.merge() == rattle_merge_kind2(Operator, Comma)) {
       /* REPORT ERROR */
     }
-    switch (expr.op.kind) {
-    case token::Kind::Comma:
+    switch (expr.op.merge()) {
+    case rattle_merge_kind2(Operator, Comma):
       if (flags.test(Flags::ListComponentsAssignable)) {
         if (not left.flags.test(Flags::Assignable)) {
           /* REPORT ERROR */
@@ -121,65 +134,65 @@ namespace rattle::analyzer::syntax {
         std::move(left.expr), std::move(right.expr), &expr);
       flags.set(Flags::Comma);
       break;
-    case token::Kind::If:
+    case rattle_merge_kind2(Identifier, If):
       node = reactor.make<ast::expr::BinaryExpr>(
         static_cast<ast::kinds::BinaryExpr>(-1), std::move(left.expr),
         std::move(right.expr), &expr);
       flags.set(Flags::If);
-    case token::Kind::Plus:
+    case rattle_merge_kind2(Operator, Plus):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Add,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::Minus:
+    case rattle_merge_kind2(Operator, Minus):
       node =
         reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Subtract,
           std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::Star:
+    case rattle_merge_kind2(Operator, Star):
       node =
         reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Multiply,
           std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::Slash:
+    case rattle_merge_kind2(Operator, Slash):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Divide,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::Or:
+    case rattle_merge_kind2(Identifier, Or):
       node =
         reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::LogicOR,
           std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::And:
+    case rattle_merge_kind2(Identifier, And):
       node =
         reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::LogicAND,
           std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::EqualEqual:
+    case rattle_merge_kind2(Operator, EqualEqual):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::CmpEQ,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::NotEqual:
+    case rattle_merge_kind2(Operator, NotEqual):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::CmpNE,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::LessThan:
+    case rattle_merge_kind2(Operator, LessThan):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::CmpLT,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::LessEqual:
+    case rattle_merge_kind2(Operator, LessEqual):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::CmpLE,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::GreaterThan:
+    case rattle_merge_kind2(Operator, GreaterThan):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::CmpGT,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::GreaterEqual:
+    case rattle_merge_kind2(Operator, GreaterEqual):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::CmpGE,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::In:
-      if (flags.test(Flags::LeftBindable1stIn) and level == 0 and
+    case rattle_merge_kind2(Identifier, In):
+      if (flags.test(Flags::LeftBindable1stIn) and level.get() == 0 and
           not left.flags.test(Flags::Binding) and left.expr) {
         /* REPORT ERROR */
       }
@@ -187,21 +200,21 @@ namespace rattle::analyzer::syntax {
         std::move(left.expr), std::move(right.expr), &expr);
       flags.set(Flags::In);
       break;
-    case token::Kind::Is:
+    case rattle_merge_kind2(Identifier, Is):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Is,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::OpenParen:
+    case rattle_merge_kind2(Marker, OpenParen):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Call,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::OpenBracket:
+    case rattle_merge_kind2(Marker, OpenBracket):
       node =
         reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Subscript,
           std::move(left.expr), std::move(right.expr), &expr);
       flags.set(Flags::Assignable);
       break;
-    case token::Kind::Dot:
+    case rattle_merge_kind2(Operator, Dot):
       if (not right.flags.test(Flags::LiteralID)) {
         /* REPORT ERROR */
       }
@@ -218,16 +231,16 @@ namespace rattle::analyzer::syntax {
     Result left{}, right{};
     if (expr.expr1) {
       left = analyze(*expr.expr1);
-    } else if (expr.tk1.kind != token::Kind::OpenParen) {
+    } else if (expr.tk1.merge() == rattle_merge_kind2(Marker, OpenParen)) {
       /* REPORT ERROR */
     }
     if (expr.expr2) {
       right = analyze(*expr.expr2);
-    } else if (expr.tk1.kind != token::Kind::OpenParen) {
+    } else if (expr.tk1.merge() == rattle_merge_kind2(Marker, OpenParen)) {
       /* REPORT ERROR */
     }
-    switch (expr.tk1.kind) {
-    case token::Kind::If: {
+    switch (expr.tk1.merge()) {
+    case rattle_merge_kind2(Identifier, If): {
       assert(left.flags.test(Flags::If));
       auto &temp = rattle_cast<ast::expr::BinaryExpr>(*left.expr);
       node = reactor.make<ast::expr::TernaryExpr>(
@@ -235,7 +248,7 @@ namespace rattle::analyzer::syntax {
         std::move(temp.right), std::move(right.expr), &expr);
       break;
     }
-    case token::Kind::OpenParen:
+    case rattle_merge_kind2(Marker, OpenParen):
       if (left.expr) {
         if (left.flags.test(Flags::LiteralID) and
             right.flags.test(Flags::Binding)) {
@@ -254,7 +267,7 @@ namespace rattle::analyzer::syntax {
           ast::kinds::UnaryExpr::Group, std::move(right.expr), &expr);
       }
       break;
-    case token::Kind::OpenBracket:
+    case rattle_merge_kind2(Marker, OpenBracket):
       if (left.expr) {
         node =
           reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Subscript,
@@ -267,11 +280,11 @@ namespace rattle::analyzer::syntax {
           ast::kinds::UnaryExpr::List, std::move(right.expr), &expr);
       }
       break;
-    case token::Kind::Is:
+    case rattle_merge_kind2(Identifier, Is):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::IsNot,
         std::move(left.expr), std::move(right.expr), &expr);
       break;
-    case token::Kind::Not:
+    case rattle_merge_kind2(Identifier, Not):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::NotIn,
         std::move(left.expr), std::move(right.expr), &expr);
       break;

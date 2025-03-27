@@ -3,8 +3,8 @@
 #include <rattle/ast/nodes.hpp>
 #include <rattle/rattle.hpp>
 #include <rattle/syntax/analyzer.hpp>
+#include <rattle/token/token.hpp>
 #include <string_view>
-#include <vector>
 
 namespace rattle::analyzer::syntax {
   void StatementAnalyzer::visit(tree::stmt::Assignment &stmt) noexcept {
@@ -22,50 +22,19 @@ namespace rattle::analyzer::syntax {
     } else {
       /* REPORT ERROR */
     }
-    switch (stmt.op.kind) {
-#define rattle_undef_token_macro
+    assert(stmt.op.kind == token::kinds::Token::Assignment);
+    switch (stmt.op.flags) {
 #define rattle_pp_token_macro(AssignKind, _)                                   \
-  case token::Kind::AssignKind:                                                \
+  case token::kinds::Assignment::AssignKind:                                   \
     node =                                                                     \
       reactor.make<ast::stmt::Assignment>(ast::kinds::Assignment::AssignKind,  \
-        std::move(slot.expr), std::move(value.expr));
+        std::move(slot.expr), std::move(value.expr));                          \
+    break;
 #include <rattle/ast/require_pp/assignment.h>
-#include <rattle/ast/require_pp/undefine.h>
+#undef rattle_pp_token_macro
     default:
       unreachable();
     }
-  }
-
-  void StatementAnalyzer::visit(tree::stmt::Block &stmt) noexcept {
-    std::vector<Scoped<ast::Stmt>> stmts(stmt.statements.size());
-    for (auto &stmt : stmt.statements) {
-      stmts.push_back(analyze(*stmt));
-    }
-    node = reactor.make<ast::stmt::Block>(std::move(stmts), &stmt);
-  }
-
-  void StatementAnalyzer::visit(tree::stmt::If &stmt) noexcept {
-    Result cond;
-    Scoped<ast::Stmt> if_body, else_body;
-    if (stmt.if_.cond) {
-      cond = expr_analyzer.analyze(*stmt.if_.cond);
-    } else {
-      /* REPORT ERROR */
-    }
-    if (stmt.if_.body) {
-      if_body = analyze(*stmt.if_.body);
-    } else {
-      /* REPORT ERROR */
-    }
-    if (stmt.else_.has_value()) {
-      if (stmt.else_.value().body) {
-        else_body = analyze(*stmt.else_.value().body);
-      } else {
-        /* REPORT ERROR */
-      }
-    }
-    node = reactor.make<ast::stmt::If>(
-      std::move(cond.expr), std::move(if_body), std::move(else_body), &stmt);
   }
 
   void StatementAnalyzer::visit(tree::stmt::ExprStmt &stmt) noexcept {
@@ -76,26 +45,12 @@ namespace rattle::analyzer::syntax {
 
   void StatementAnalyzer::visit(tree::stmt::TkExpr &stmt) noexcept {
     Result expr;
-    switch (stmt.tk.kind) {
-    case token::Kind::Continue:
-      if (stmt.expr) {
-        /* REPORT ERROR */
-      }
-      node = reactor.make<ast::stmt::LoopControl>(
-        ast::kinds::LoopControl::Continue, &stmt);
-      break;
-    case token::Kind::Break:
-      if (stmt.expr) {
-        /* REPORT ERROR */
-      }
-      node = reactor.make<ast::stmt::LoopControl>(
-        ast::kinds::LoopControl::Break, &stmt);
-      break;
-    case token::Kind::Return:
+    switch (stmt.tk.merge()) {
+    case rattle_merge_kind2(Identifier, Return):
       node = reactor.make<ast::stmt::Command>(ast::kinds::Command::Return,
         (stmt.expr ? expr_analyzer.analyze(*stmt.expr).expr : nullptr), &stmt);
       break;
-    case token::Kind::Nonlocal:
+    case rattle_merge_kind2(Identifier, Nonlocal):
       expr = expr_analyzer.analyze<Flags::ListOfIDsOnly>(*stmt.expr);
       if (expr.flags.test(Flags::OnlyIDs)) {
         node = reactor.make<ast::stmt::Command>(
@@ -104,7 +59,7 @@ namespace rattle::analyzer::syntax {
         /* REPORT ERROR */
       }
       break;
-    case token::Kind::Global:
+    case rattle_merge_kind2(Identifier, Global):
       expr = expr_analyzer.analyze<Flags::ListOfIDsOnly>(*stmt.expr);
       if (expr.flags.test(Flags::OnlyIDs)) {
         node = reactor.make<ast::stmt::Command>(
@@ -118,9 +73,30 @@ namespace rattle::analyzer::syntax {
     }
   }
 
-  void StatementAnalyzer::visit(tree::stmt::TkExprBlock &stmt) noexcept {
+  void StatementAnalyzer::visit(tree::stmt::Event &stmt) noexcept {
+    switch (stmt.kind) {
+    case tree::stmt::Event::Kind::ScopeBegin:
+      node =
+        reactor.make<ast::stmt::Event>(ast::kinds::Event::ScopeBegin, &stmt);
+      break;
+    case tree::stmt::Event::Kind::ScopeEnd:
+      node = reactor.make<ast::stmt::Event>(ast::kinds::Event::ScopeEnd, &stmt);
+      break;
+    case tree::stmt::Event::Kind::Continue:
+      node = reactor.make<ast::stmt::Event>(ast::kinds::Event::Continue, &stmt);
+      break;
+    case tree::stmt::Event::Kind::Break:
+      node = reactor.make<ast::stmt::Event>(ast::kinds::Event::Break, &stmt);
+      break;
+    default:
+      unreachable();
+    }
+  }
+
+  void StatementAnalyzer::visit(tree::stmt::TkExprStmt &stmt) noexcept {
     Scoped<ast::Stmt> body;
-    if (not stmt.expr) {
+    if (stmt.tk.merge() != rattle_merge_kind2(Identifier, Else) and
+        not stmt.expr) {
       /* REPORT ERROR */
     }
     if (stmt.block) {
@@ -128,8 +104,8 @@ namespace rattle::analyzer::syntax {
     } else {
       /* REPORT ERROR */
     }
-    switch (stmt.tk.kind) {
-    case token::Kind::For: {
+    switch (stmt.tk.merge()) {
+    case rattle_merge_kind2(Identifier, For): {
       Result expr = stmt.expr ? expr_analyzer.analyze<Flags::LeftBindable1stIn>(
                                   *stmt.expr) :
                                 Result{};
@@ -142,13 +118,13 @@ namespace rattle::analyzer::syntax {
       }
       break;
     }
-    case token::Kind::While: {
+    case rattle_merge_kind2(Identifier, While): {
       Result expr = stmt.expr ? expr_analyzer.analyze(*stmt.expr) : Result{};
       node = reactor.make<ast::stmt::While>(
         std::move(expr.expr), std::move(body), &stmt);
       break;
     }
-    case token::Kind::Def: {
+    case rattle_merge_kind2(Identifier, Def): {
       Result expr = stmt.expr ?
                       expr_analyzer.analyze<Flags::PreferBinding>(*stmt.expr) :
                       Result{};
@@ -164,7 +140,7 @@ namespace rattle::analyzer::syntax {
       }
       break;
     }
-    case token::Kind::Class: {
+    case rattle_merge_kind2(Identifier, Class): {
       Result expr = stmt.expr ? expr_analyzer.analyze(*stmt.expr) : Result{};
       if (expr.flags.test(Flags::LiteralID)) {
         std::string_view name =
@@ -173,6 +149,16 @@ namespace rattle::analyzer::syntax {
       } else {
         /* REPORT ERROR */
       }
+      break;
+    }
+    case rattle_merge_kind2(Identifier, If): {
+      Result expr = stmt.expr ? expr_analyzer.analyze(*stmt.expr) : Result{};
+      node = reactor.make<ast::stmt::If>(
+        std::move(expr.expr), std::move(body), &stmt);
+      break;
+    }
+    case rattle_merge_kind2(Identifier, Else): {
+      node = reactor.make<ast::stmt::Else>(std::move(body), &stmt);
       break;
     }
     default:
