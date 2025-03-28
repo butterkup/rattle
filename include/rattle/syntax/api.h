@@ -7,7 +7,7 @@
 namespace rattle::analyzer::syntax {
   struct IReactor {
     virtual void *allocate(std::size_t) noexcept = 0;
-    virtual utility::OnError report(utility::Scoped<error::Error>) noexcept = 0;
+    virtual utility::OnError report(error::Error const &) noexcept = 0;
   };
-} // namespace rattle::analyzer
+} // namespace rattle::analyzer::syntax
 

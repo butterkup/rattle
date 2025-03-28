@@ -1,19 +1,27 @@
 #pragma once
 
 #include "api.h"
+#include <optional>
 #include <rattle/analyzer.hpp>
 #include <rattle/parser.hpp>
 #include <rattle/rattle.hpp>
 #include <rattle/tree/api.hpp>
+#include <rattle/utility.hpp>
 #include <type_traits>
 
 namespace rattle::analyzer {
   namespace syntax {
     using utility::Scoped;
 
-    struct Reactor {
-      Reactor(IReactor &inner): inner{inner} {}
+    class Analyzer;
+
+    class Reactor {
       IReactor &inner;
+      Analyzer &analyzer;
+
+    public:
+      Reactor(IReactor &inner, Analyzer &analyzer)
+        : inner{inner}, analyzer{analyzer} {}
       template <typename Type, typename... Args>
         requires std::is_constructible_v<Type, Args...>
       Scoped<Type> make(Args &&...args) noexcept(
@@ -27,6 +35,8 @@ namespace rattle::analyzer {
         }
         return static_cast<Type *>(slab);
       }
+
+      void report(error::Error const &error) noexcept;
     };
 
     struct Flags {
@@ -72,6 +82,7 @@ namespace rattle::analyzer {
     struct Result {
       Scoped<ast::Expr> expr;
       Flags flags;
+      token::Location begin, end;
     };
 
     // Help keep track of how deep the visitor has been called
@@ -104,8 +115,25 @@ namespace rattle::analyzer {
 
       Flags flags;
       Level level;
+      token::Location loc_begin, loc_end;
       Reactor &reactor;
       Scoped<ast::Expr> node;
+
+      void report(const char *description,
+        std::optional<token::Location> begin = std::nullopt,
+        std::optional<token::Location> end = std::nullopt) noexcept {
+        reactor.report(error::Error{.description = description,
+          .begin = begin.has_value() ? begin.value() : loc_begin,
+          .end = end.has_value() ? end.value() : loc_end});
+      }
+
+      void report(const char *description, token::Token const &token) noexcept {
+        report(description, token.start, token.end);
+      }
+
+      void report(const char *description, Result const &result) noexcept {
+        report(description, result.begin, result.end);
+      }
 
     public:
       ExpressionAnalyzer(Reactor &reactor)
@@ -121,6 +149,7 @@ namespace rattle::analyzer {
         auto _ = level.enter(); // RAII
         // Save caller's state
         Scoped<ast::Expr> oldnode = std::move(node);
+        token::Location oldloc_begin = loc_begin, oldloc_end = loc_end;
         Flags oldflags = flags; // Save caller's state.
         // Inherit filtered caller's constraints.
         // NOTE: Normal flags could lead to invalid visitation, strictly ensure
@@ -132,10 +161,13 @@ namespace rattle::analyzer {
         // Capture the visited node's state
         Flags newflags = flags;
         Scoped<ast::Expr> newnode = std::move(node);
+        token::Location newloc_begin = loc_begin, newloc_end = loc_end;
         // Reset caller's state
         flags = oldflags;
         node = std::move(oldnode);
-        return {std::move(newnode), newflags};
+        loc_begin = oldloc_begin;
+        loc_end = oldloc_end;
+        return {std::move(newnode), newflags, newloc_begin, newloc_end};
       }
     };
 
@@ -146,6 +178,20 @@ namespace rattle::analyzer {
       Reactor &reactor;
       Scoped<ast::Stmt> node;
       ExpressionAnalyzer &expr_analyzer;
+
+      void report(const char *description, token::Location begin,
+        token::Location end) noexcept {
+        reactor.report(
+          error::Error{.description = description, .begin = begin, .end = end});
+      }
+
+      void report(const char *description, token::Token const &token) noexcept {
+        report(description, token.start, token.end);
+      }
+
+      void report(const char *description, Result const &result) noexcept {
+        report(description, result.begin, result.end);
+      }
 
     public:
       StatementAnalyzer(Reactor &reactor, ExpressionAnalyzer &expr_analyzer)
@@ -167,7 +213,7 @@ namespace rattle::analyzer {
 
     public:
       Analyzer(IReactor &ireactor, IParser &parser)
-        : parser{parser}, reactor{ireactor}, expr_analyzer{reactor},
+        : parser{parser}, reactor{ireactor, *this}, expr_analyzer{reactor},
           stmt_analyzer{reactor, expr_analyzer} {}
 
       bool empty() const noexcept { return parser.empty(); }
@@ -179,6 +225,12 @@ namespace rattle::analyzer {
         return stmt ? stmt_analyzer.analyze(*stmt) : nullptr;
       }
     };
+
+    inline void Reactor::report(error::Error const &error) noexcept {
+      if (inner.report(error) == utility::OnError::Abort) {
+        analyzer.drain();
+      }
+    }
   } // namespace syntax
 
   class SyntaxAnalyzer: ISyntaxAnalyzer {

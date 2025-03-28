@@ -8,6 +8,8 @@
 
 namespace rattle::analyzer::syntax {
   void ExpressionAnalyzer::visit(tree::expr::Literal &expr) noexcept {
+    loc_begin = expr.value.start;
+    loc_end = expr.value.end;
     if (expr.value.merge() == rattle_merge_kind2(Identifier, Variable)) {
       flags.set(Flags::Assignable | Flags::LiteralID | Flags::OnlyIDs);
       if (flags.test(Flags::PreferBinding)) {
@@ -48,88 +50,109 @@ namespace rattle::analyzer::syntax {
   }
 
   void ExpressionAnalyzer::visit(tree::expr::UnaryExpr &expr) noexcept {
-    Result temp{};
+    loc_begin = expr.op.start;
+    loc_end = expr.op.end;
+    Result temp;
     if (expr.operand) {
       temp = analyze(*expr.operand);
+      loc_end = temp.end;
     } else {
       /* REPORT ERROR */
+      report("unary operator missing right operand", expr.op);
     }
     switch (expr.op.merge()) {
     case rattle_merge_kind2(Operator, Plus):
       node = reactor.make<ast::expr::UnaryExpr>(
         ast::kinds::UnaryExpr::Posify, std::move(temp.expr), &expr);
+      break;
     case rattle_merge_kind2(Operator, Star):
       if (flags.test(Flags::PreferBinding)) {
-        if (not temp.flags.test(Flags::LiteralID)) {
+        if (temp.flags.test(Flags::LiteralID)) {
+          auto &tmp = rattle_cast<ast::expr::Literal>(*temp.expr);
+          node = reactor.make<ast::expr::Binding>(
+            ast::kinds::Binding::Capture, tmp.value, &expr);
+          flags.set(Flags::Binding);
+        } else if (temp.expr) {
           /* REPORT ERROR */
+          report(
+            "capture expression expected identifier for right operand", temp);
         }
-        auto &tmp = rattle_cast<ast::expr::Literal>(*temp.expr);
-        node = reactor.make<ast::expr::Binding>(
-          ast::kinds::Binding::Capture, tmp.value, &expr);
-        flags.set(Flags::Binding);
       } else {
         node = reactor.make<ast::expr::UnaryExpr>(
           ast::kinds::UnaryExpr::Spread, std::move(temp.expr), &expr);
       }
+      break;
     case rattle_merge_kind2(Operator, Minus):
       node = reactor.make<ast::expr::UnaryExpr>(
         ast::kinds::UnaryExpr::Negate, std::move(temp.expr), &expr);
+      break;
     case rattle_merge_kind2(Identifier, Not):
       node = reactor.make<ast::expr::UnaryExpr>(
         ast::kinds::UnaryExpr::LogicNOT, std::move(temp.expr), &expr);
+      break;
     default:
       unreachable();
     }
   }
 
   void ExpressionAnalyzer::visit(tree::expr::BinaryExpr &expr) noexcept {
-    Result left{}, right{};
+    Result left, right;
+    loc_begin = expr.op.start;
+    loc_end = expr.op.end;
     if (expr.left) {
       left = analyze(*expr.left);
+      loc_begin = left.begin;
     } else {
       /* REPORT ERROR */
+      report("binary operator missing left operand", expr.op);
     }
     if (expr.right) {
       right = analyze(*expr.right);
-    } else if (expr.op.merge() == rattle_merge_kind2(Operator, Comma)) {
+      loc_end = right.end;
+    } else if (expr.op.merge() != rattle_merge_kind2(Operator, Comma)) {
       /* REPORT ERROR */
+      report("binary operator missing right operand", expr.op);
     }
     switch (expr.op.merge()) {
     case rattle_merge_kind2(Operator, Comma):
       if (flags.test(Flags::ListComponentsAssignable)) {
         if (not left.flags.test(Flags::Assignable)) {
           /* REPORT ERROR */
+          report("expression is not an assignable target", left);
         }
         if (right.expr and not right.flags.test(Flags::Assignable)) {
           /* REPORT ERROR */
+          report("expression is not an assignable target", right);
         }
+        // We don't want to report errors here and from the
+        // caller's place, we report here and we lie to the
+        // caller about the assignability of the expression.
+        flags.set(Flags::Assignable);
       }
       if (flags.test(Flags::PreferBinding)) {
         if (not left.flags.test(Flags::Binding)) {
           /* REPORT ERROR */
+          report("expression is not a bindable target", left);
         }
         if (right.expr and not right.flags.test(Flags::Binding)) {
           /* REPORT ERROR */
+          report("expression is not a bindable target", right);
         }
+        // Potentially lie that the list components are bindable.
+        flags.set(Flags::Binding);
       }
       if (flags.test(Flags::ListOfIDsOnly)) {
         if (not left.flags.test(Flags::OnlyIDs)) {
           /* REPORT ERROR */
+          report("expected an identifier", left);
         }
         if (not right.flags.test(Flags::OnlyIDs)) {
           /* REPORT ERROR */
+          report("expected an identifier", right);
         }
+        // Potentially lie that the list is made of IDs only.
+        flags.set(Flags::OnlyIDs);
       }
-      // Activate the bits iff both the left and right have them on
-      flags.set(left.flags.get() &
-                (right.expr ? right.flags.get() : Flags::Assignable) &
-                Flags::Assignable);
-      flags.set(left.flags.get() &
-                (right.expr ? right.flags.get() : Flags::Binding) &
-                Flags::OnlyIDs);
-      flags.set(left.flags.get() &
-                (right.expr ? right.flags.get() : Flags::OnlyIDs) &
-                Flags::OnlyIDs);
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Comma,
         std::move(left.expr), std::move(right.expr), &expr);
       flags.set(Flags::Comma);
@@ -139,6 +162,7 @@ namespace rattle::analyzer::syntax {
         static_cast<ast::kinds::BinaryExpr>(-1), std::move(left.expr),
         std::move(right.expr), &expr);
       flags.set(Flags::If);
+      break;
     case rattle_merge_kind2(Operator, Plus):
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Add,
         std::move(left.expr), std::move(right.expr), &expr);
@@ -195,6 +219,7 @@ namespace rattle::analyzer::syntax {
       if (flags.test(Flags::LeftBindable1stIn) and level.get() == 0 and
           not left.flags.test(Flags::Binding) and left.expr) {
         /* REPORT ERROR */
+        report("expression is not a bindable target", left);
       }
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::In,
         std::move(left.expr), std::move(right.expr), &expr);
@@ -215,8 +240,9 @@ namespace rattle::analyzer::syntax {
       flags.set(Flags::Assignable);
       break;
     case rattle_merge_kind2(Operator, Dot):
-      if (not right.flags.test(Flags::LiteralID)) {
+      if (right.expr and not right.flags.test(Flags::LiteralID)) {
         /* REPORT ERROR */
+        report("expected an identifier", right);
       }
       node = reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Dot,
         std::move(left.expr), std::move(right.expr), &expr);
@@ -228,16 +254,22 @@ namespace rattle::analyzer::syntax {
   }
 
   void ExpressionAnalyzer::visit(tree::expr::BiExprBiTk &expr) noexcept {
-    Result left{}, right{};
+    Result left, right;
+    loc_begin = expr.tk1.start;
+    loc_end = expr.tk2.end;
     if (expr.expr1) {
       left = analyze(*expr.expr1);
-    } else if (expr.tk1.merge() == rattle_merge_kind2(Marker, OpenParen)) {
+      loc_begin = left.begin;
+    } else if (expr.tk1.merge() != rattle_merge_kind2(Marker, OpenParen)) {
       /* REPORT ERROR */
+      report("expected an expression before this token", expr.tk1);
     }
     if (expr.expr2) {
       right = analyze(*expr.expr2);
-    } else if (expr.tk1.merge() == rattle_merge_kind2(Marker, OpenParen)) {
+      loc_end = right.end;
+    } else if (expr.tk1.merge() != rattle_merge_kind2(Marker, OpenParen)) {
       /* REPORT ERROR */
+      report("expected an expression after this token", expr.tk2);
     }
     switch (expr.tk1.merge()) {
     case rattle_merge_kind2(Identifier, If): {
@@ -269,13 +301,14 @@ namespace rattle::analyzer::syntax {
       break;
     case rattle_merge_kind2(Marker, OpenBracket):
       if (left.expr) {
+        if (not right.expr) {
+          /* REPORT ERROR */
+          report("subscript operator must have an index expression");
+        }
         node =
           reactor.make<ast::expr::BinaryExpr>(ast::kinds::BinaryExpr::Subscript,
             std::move(left.expr), std::move(right.expr), &expr);
       } else {
-        if (not right.expr) {
-          /* REPORT ERROR */
-        }
         node = reactor.make<ast::expr::UnaryExpr>(
           ast::kinds::UnaryExpr::List, std::move(right.expr), &expr);
       }

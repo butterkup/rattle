@@ -8,19 +8,22 @@
 
 namespace rattle::analyzer::syntax {
   void StatementAnalyzer::visit(tree::stmt::Assignment &stmt) noexcept {
-    Result slot{}, value{};
+    Result slot, value;
     if (stmt.left) {
       slot = expr_analyzer.analyze<Flags::ListComponentsAssignable>(*stmt.left);
       if (not slot.flags.test(Flags::Assignable)) {
         /* REPORT ERROR */
+        report("not assignable", slot);
       }
     } else {
       /* REPORT ERROR */
+      report("expected an assignable target", stmt.op);
     }
     if (stmt.right) {
       value = expr_analyzer.analyze(*stmt.right);
     } else {
       /* REPORT ERROR */
+      report("expected an expression after assignment operator", stmt.op);
     }
     assert(stmt.op.kind == token::kinds::Token::Assignment);
     switch (stmt.op.flags) {
@@ -51,21 +54,35 @@ namespace rattle::analyzer::syntax {
         (stmt.expr ? expr_analyzer.analyze(*stmt.expr).expr : nullptr), &stmt);
       break;
     case rattle_merge_kind2(Identifier, Nonlocal):
-      expr = expr_analyzer.analyze<Flags::ListOfIDsOnly>(*stmt.expr);
+      if (stmt.expr) {
+        expr = expr_analyzer.analyze<Flags::ListOfIDsOnly>(*stmt.expr);
+      } else {
+        /* REPORT ERROR */
+        report("expected an expression", stmt.tk);
+      }
       if (expr.flags.test(Flags::OnlyIDs)) {
         node = reactor.make<ast::stmt::Command>(
           ast::kinds::Command::Nonlocal, std::move(expr.expr), &stmt);
       } else {
         /* REPORT ERROR */
+        report("expected an identifier or comma separated list of identifiers",
+          expr);
       }
       break;
     case rattle_merge_kind2(Identifier, Global):
-      expr = expr_analyzer.analyze<Flags::ListOfIDsOnly>(*stmt.expr);
+      if (stmt.expr) {
+        expr = expr_analyzer.analyze<Flags::ListOfIDsOnly>(*stmt.expr);
+      } else {
+        /* REPORT ERROR */
+        report("expected an expression", stmt.tk);
+      }
       if (expr.flags.test(Flags::OnlyIDs)) {
         node = reactor.make<ast::stmt::Command>(
           ast::kinds::Command::Global, std::move(expr.expr), &stmt);
       } else {
         /* REPORT ERROR */
+        report("expected an identifier or comma separated list of identifiers",
+          expr);
       }
       break;
     default:
@@ -98,11 +115,13 @@ namespace rattle::analyzer::syntax {
     if (stmt.tk.merge() != rattle_merge_kind2(Identifier, Else) and
         not stmt.expr) {
       /* REPORT ERROR */
+      report("expected an expression after token", stmt.tk);
     }
     if (stmt.block) {
       body = analyze(*stmt.block);
     } else {
       /* REPORT ERROR */
+      report("expected block statement for statement", stmt.tk);
     }
     switch (stmt.tk.merge()) {
     case rattle_merge_kind2(Identifier, For): {
@@ -113,8 +132,9 @@ namespace rattle::analyzer::syntax {
         auto &tmp = rattle_cast<ast::expr::BinaryExpr>(*expr.expr);
         node = reactor.make<ast::stmt::For>(
           std::move(tmp.left), std::move(tmp.right), std::move(body), &stmt);
-      } else {
+      } else if (expr.expr) {
         /* REPORT ERROR */
+        report("expected an `in` expression", expr);
       }
       break;
     }
@@ -135,8 +155,11 @@ namespace rattle::analyzer::syntax {
           std::move(rattle_cast<ast::expr::UnaryExpr>(*tmp.right).operand);
         node = reactor.make<ast::stmt::Def>(ast::kinds::Def::Function, name,
           std::move(params), std::move(body), &stmt);
-      } else {
+      } else if (expr.expr) {
         /* REPORT ERROR */
+        report(
+          "expected a signature expression like `name(identifier, *capture)`",
+          expr);
       }
       break;
     }
@@ -146,8 +169,9 @@ namespace rattle::analyzer::syntax {
         std::string_view name =
           rattle_cast<ast::expr::Literal>(*expr.expr).value;
         node = reactor.make<ast::stmt::Class>(name, std::move(body), &stmt);
-      } else {
+      } else if (expr.expr) {
         /* REPORT ERROR */
+        report("expected class name", expr);
       }
       break;
     }
